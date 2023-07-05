@@ -18,8 +18,8 @@ END OF THIS DOCUMENT.
 System Requirements
 -------------------
 
-* A Pentium 4 CPU is really the minimum. Some tests have shown that a system
-  with at least 2 CPU cores is preferred.
+* A Pentium 4 (or Pentium M) CPU is really the minimum. Some tests have shown
+  that a system with at least 2 CPU cores is preferred.
 
 * 3 GB of system memory is recommended. Dooble is known to work on systems with
   less memory but it may seriously affect its stability.
@@ -30,8 +30,8 @@ System Requirements
   installation (go to your ArcaOS order by visiting www.arcanoae.com and
   logging in to check for updates):
 
-  - OS/2 kernel version 14.203
-  - ACPI version 3.23.16
+  - OS/2 kernel version 14.203 or higher
+  - ACPI version 3.23.16 or higher
   - Latest UNIAUD
 
   If you are running an older version of OS/2 such as eComStation or OS/2 Warp,
@@ -47,9 +47,9 @@ System Requirements
 Installing Dooble
 -----------------
 
-Installation of the browser can only be done in the RPM/YUM environment. The
+Installation of the browser is best done in the RPM/YUM environment. The
 easiest way is to use the graphical front-end for RPM/YUM called Arca Noae
-Package Manager (ANPM).
+Package Manager (ANPM). Sometimes there will also be zips published.
 
 In ArcaOS the ANPM program is installed by default and can be found in the
 folder: Computer -> System Setup -> Arca Noae Package Manager. If you do not
@@ -64,6 +64,11 @@ Step-by-step installation instructions:
 3. Restart your system after updating is finished.
 4. Launch ANPM again.
 5. Go to the "available" list, select Dooble browser and install it.
+6. For Dave Yeo's builds, it is suggested to copy dooble.exe to something
+   like dooble_os2.exe. This way any bugs encountered can be checked against
+   the official Bitwise release.
+7. Using ANPM, goto Manage-->Yum tools-->Install package from file...
+   and install the RPM.
 
 Note that with all the updates you need to install and Dooble browser itself
 you may need to download a few hundred megabytes.
@@ -80,8 +85,15 @@ Known Limitations
 Contacts
 --------
 
+For Dave Yeo builds, it is suggested to see if the bug exists in
+the official Dooble released by Bitwise and then file a bug report
+at the link below.
+I will also look at bug reports but am not a very good developer.
+
 If you want to report a bug report, please visit the Dooble for OS/2 project
 page at https://github.com/bitwiseworks/dooble-os2.
+
+Dave Yeo dave.r.yeo@gmail.com or dyeo@gmx.com
 
 
 Credits
@@ -92,6 +104,7 @@ Dooble is Copyright (c) 2008 - present, Alexis Megas.
 Dooble for OS/2 (including OS/2 versions of Qt Toolkit version 5 and Chromium
 web browser) is kindly brought to you by bww bitwise works GmbH (Dmitriy
 Kuminov, Silvan Scherrer, Herwig Bauernfeind, https://www.bitwiseworks.com).
+Rebuilds by Dave Yeo
 
 Thanks to Elbert Pol for building and testing both Dooble an Qt at earlier
 stages of development.
