@@ -24,6 +24,10 @@ System Requirements
 * 3 GB of system memory is recommended. Dooble is known to work on systems with
   less memory but it may seriously affect its stability.
 
+* VIRTUALADDRESSLIMIT of at least 2048. Preferable 2560 or higher.
+  Note that too high of a VIRTUALADDRESSLIMIT can cause instability depending
+  on hardware.
+
 * When it comes to the supported operating system, it is strongly recommended
   that you use ArcaOS version 5 or above. Please make sure that you have at
   least the following versions of the following components in your ArcaOS
@@ -64,9 +68,9 @@ Step-by-step installation instructions:
 3. Restart your system after updating is finished.
 4. Launch ANPM again.
 5. Go to the "available" list, select Dooble browser and install it.
-6. For Dave Yeo's builds, it is suggested to copy dooble.exe to something
-   like dooble_os2.exe. This way any bugs encountered can be checked against
-   the official Bitwise release.
+6. For Dave Yeo's builds that are available as files, it is suggested to copy
+   dooble.exe to something like dooble_os2.exe. This way any bugs encountered
+   can be checked against the official Bitwise release.
 7. Using ANPM, goto Manage-->Yum tools-->Install package from file...
    and install the RPM.
 
@@ -80,7 +84,11 @@ Known Limitations
 - Audio in youtube.com videos may only play for a few seconds and then go
   silent. This depends on a combination of the hardware installed in your
   computer.
-
+- Sometimes the first tab does not load an URL. Work around, open a new tab.
+  Can also pass a homepage URL in the program object or on the cmd line.
+- Printing and Print preview can crash Dooble
+- Some characters such the delete key are not recognized. This may include
+  some umlauts.
 
 Contacts
 --------
@@ -88,6 +96,9 @@ Contacts
 For Dave Yeo builds, it is suggested to see if the bug exists in
 the official Dooble released by Bitwise and then file a bug report
 at the link below.
+It is also a good idea to test the simple browser to see if it has
+the same bug, which points to a Qt5 or Qt5webengine bug rather then
+a Dooble bug.
 I will also look at bug reports but am not a very good developer.
 
 If you want to report a bug report, please visit the Dooble for OS/2 project
@@ -105,6 +116,8 @@ Dooble for OS/2 (including OS/2 versions of Qt Toolkit version 5 and Chromium
 web browser) is kindly brought to you by bww bitwise works GmbH (Dmitriy
 Kuminov, Silvan Scherrer, Herwig Bauernfeind, https://www.bitwiseworks.com).
 Rebuilds by Dave Yeo
+
+Thanks to Paul Smedley for getting OS/2 patches accepted upstream.
 
 Thanks to Elbert Pol for building and testing both Dooble an Qt at earlier
 stages of development.
