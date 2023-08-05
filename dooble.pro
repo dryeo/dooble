@@ -229,6 +229,10 @@ macx {
 DEFINES         += DOOBLE_MMAN_PRESENT
 }
 
+os2 {
+DEFINES         -= DOOBLE_MMAN_PRESENT
+}
+
 CONFIG		+= qt release warn_on
 DEFINES         += QT_DEPRECATED_WARNINGS
 LANGUAGE	= C++
