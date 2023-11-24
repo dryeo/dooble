@@ -1661,6 +1661,12 @@ void dooble::prepare_page_connections(dooble_page *page)
 	  static_cast<Qt::ConnectionType> (Qt::AutoConnection |
 					   Qt::UniqueConnection));
   connect(page,
+	  SIGNAL(translate_page(void)),
+	  this,
+	  SLOT(slot_translate_page(void)),
+	  static_cast<Qt::ConnectionType> (Qt::AutoConnection |
+					   Qt::UniqueConnection));
+  connect(page,
 	  SIGNAL(vacuum_databases(void)),
 	  this,
 	  SLOT(slot_vacuum_databases(void)),
@@ -2867,6 +2873,10 @@ void dooble::remove_page_connections(dooble_page *page)
 	     SIGNAL(titleChanged(const QString &)),
 	     this,
 	     SLOT(slot_title_changed(const QString &)));
+  disconnect(page,
+	     SIGNAL(translate_page(void)),
+	     this,
+	     SLOT(slot_translate_page(void)));
   disconnect(page,
 	     SIGNAL(vacuum_databases(void)),
 	     this,
@@ -5183,6 +5193,24 @@ void dooble::slot_title_changed(const QString &title)
     m_ui.tab->setTabToolTip(m_ui.tab->indexOf(page), tr("Application Locked"));
   else
     m_ui.tab->setTabToolTip(m_ui.tab->indexOf(page), text);
+}
+
+void dooble::slot_translate_page(void)
+{
+  auto page = qobject_cast<dooble_page *> (sender());
+
+  if(!page)
+    return;
+
+  auto destination(dooble::s_google_translate_url);
+  auto host(page->url().host().trimmed().replace('.', '-'));
+  auto path(page->url().path().trimmed());
+
+  destination.replace("%1", host);
+  destination.replace("%2", path);
+  destination.replace
+    ("%3", QLocale::languageToString(QLocale().language()).toLower().mid(0, 2));
+  slot_open_link_in_new_tab(QUrl::fromUserInput(destination));
 }
 
 void dooble::slot_vacuum_databases(void)

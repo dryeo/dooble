@@ -117,6 +117,7 @@ class dooble: public QMainWindow
   static QSet<QString> s_current_url_executables;
   static QString ABOUT_BLANK;
   static QString s_default_http_user_agent;
+  static QString s_google_translate_url;
   static QSet<QString> current_url_executables(void);
   static void clean(void);
   static void print(QWidget *parent, dooble_charts *chart);
@@ -303,6 +304,7 @@ class dooble: public QMainWindow
   void slot_tab_widget_shortcut_activated(void);
   void slot_tabs_menu_button_clicked(void);
   void slot_title_changed(const QString &title);
+  void slot_translate_page(void);
   void slot_vacuum_databases(void);
   void slot_warn_of_missing_sqlite_driver(void);
   void slot_window_close_requested(void);

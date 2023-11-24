@@ -1,5 +1,6 @@
 Architecture: amd64
-Depends: libqt5charts5 (>= 5.15.0),
+Depends: libgpgme11 (>= 1.16.0),
+	 libqt5charts5 (>= 5.15.0),
 	 libqt5core5a (>= 5.15.0),
 	 libqt5gui5 (>= 5.15.0),
 	 libqt5network5 (>= 5.15.0),
@@ -13,7 +14,7 @@ Maintainer: f83043e79dc03a0abfbcbc376879a97d66f2cacb@protonmail.ch
 Package: Dooble
 Priority: optional
 Section: Internet
-Version: 2023.05.31
+Version: 2023.11.30
 Description: Dooble Web Browser
  Welcome to the Dooble Web Browser!
  A dooble.desktop file will also be installed in /usr/share/applications/.
