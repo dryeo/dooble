@@ -72,21 +72,37 @@ Step-by-step installation instructions:
    dooble.exe to something like dooble_os2.exe. This way any bugs encountered
    can be checked against the official Bitwise release.
 7. Using ANPM, goto Manage-->Yum tools-->Install package from file...
-   and install the RPM.
+   and install the RPM and ideally also the debug package.
 
 Note that with all the updates you need to install and Dooble browser itself
 you may need to download a few hundred megabytes.
 
+Dictionary support
+------------------
+
+  Currently dictionary files need to be installed in qtwebengine_dictionaries
+  as a sudirectory of where the Dooble executable lives.
+  Usually @unixroot\usr\bin\qtwebengine_dictionaries and needs to be manually
+  created.
+  Dictionaries need to be in bdic format.
+  To convert the dictionaries in @unixroot\usr\share\myspell installed by
+  Hunspell, there is @unixroot\usr\lib\qt5\bin\qwebengine_convert_dict.exe
+  Run it something like,
+  X:\usr\lib\qt5\bin\qwebengine_convert_dict.exe ./en_CA.dic ./en_CA.bdic
+  Ignore delta not found errors.
 
 Known Limitations
 -----------------
 
-- Audio in youtube.com videos may only play for a few seconds and then go
+- Audio in YouTube.com videos may only play for a few seconds and then go
   silent. This depends on a combination of the hardware installed in your
   computer.
+- AV encoded videos on YouTube may stop playing after a few seconds, also
+  seems hardware dependent.
 - Sometimes the first tab does not load an URL. Work around, open a new tab.
   Can also pass a homepage URL in the program object or on the cmd line.
 - Printing and Print preview can crash Dooble
+- Private browsing windows do not work in single-process mode
 - Some characters such the delete key are not recognized. This may include
   some umlauts.
 
@@ -115,6 +131,7 @@ Dooble is Copyright (c) 2008 - present, Alexis Megas.
 Dooble for OS/2 (including OS/2 versions of Qt Toolkit version 5 and Chromium
 web browser) is kindly brought to you by bww bitwise works GmbH (Dmitriy
 Kuminov, Silvan Scherrer, Herwig Bauernfeind, https://www.bitwiseworks.com).
+
 Rebuilds by Dave Yeo
 
 Thanks to Paul Smedley for getting OS/2 patches accepted upstream.
