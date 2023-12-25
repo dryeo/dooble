@@ -52,6 +52,7 @@
 #include "dooble_favorites_popup.h"
 #include "dooble_history.h"
 #include "dooble_history_window.h"
+#include "dooble_javascript.h"
 #include "dooble_page.h"
 #include "dooble_popup_menu.h"
 #include "dooble_search_engines_popup.h"
@@ -206,6 +207,10 @@ dooble_page::dooble_page(QWebEngineProfile *web_engine_profile,
 	  SIGNAL(inject_custom_css(void)),
 	  this,
 	  SLOT(slot_inject_custom_css(void)));
+  connect(m_ui.address,
+	  SIGNAL(javascript_console(void)),
+	  this,
+	  SLOT(slot_javascript_console(void)));
   connect(m_ui.address,
 	  SIGNAL(load_page(const QUrl &)),
 	  this,
@@ -690,6 +695,11 @@ void dooble_page::hide_status_bar(bool state)
 void dooble_page::inject_custom_css(void)
 {
   slot_inject_custom_css();
+}
+
+ void dooble_page::javascript_console(void)
+{
+  slot_javascript_console();
 }
 
 void dooble_page::load(const QUrl &url)
@@ -1304,6 +1314,9 @@ void dooble_page::prepare_standard_menus(void)
   menu->addAction(tr("Inject Custom Style Sheet..."),
 		  this,
 		  SLOT(slot_inject_custom_css(void)));
+  menu->addAction(tr("JavaScript Console..."),
+		  this,
+		  SLOT(slot_javascript_console(void)));
   menu->addSeparator();
   menu->addAction
     (QIcon::fromTheme(use_material_icons + "application-menu",
@@ -2349,6 +2362,19 @@ void dooble_page::slot_javascript_allow_popup_exception(void)
     (m_ui.javascript_allow_popup_exception->
      mapToGlobal(m_ui.javascript_allow_popup_exception->rect().bottomLeft()));
   m_ui.javascript_allow_popup_exception->setChecked(false);
+}
+
+void dooble_page::slot_javascript_console(void)
+{
+  if(!m_javascript_console)
+    {
+      m_javascript_console = new dooble_javascript(this);
+      m_javascript_console->set_page(m_view->page());
+    }
+
+  m_javascript_console->showNormal();
+  m_javascript_console->raise();
+  m_javascript_console->activateWindow();
 }
 
 void dooble_page::slot_link_hovered(const QString &url)

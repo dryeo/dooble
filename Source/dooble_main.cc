@@ -95,6 +95,7 @@ int main(int argc, char *argv[])
 
   QList<QUrl> urls;
   auto attach = false;
+  auto full_screen = false;
   auto test_aes = false;
   auto test_aes_performance = false;
   auto test_threefish = false;
@@ -107,6 +108,24 @@ int main(int argc, char *argv[])
 	  attach = true;
 	else if(strcmp(argv[i], "--executable-current-url") == 0)
 	  i += 1;
+	else if(strcmp(argv[i], "--full-screen") == 0)
+	  full_screen = true;
+	else if(strcmp(argv[i], "--help") == 0)
+	  {
+	    qDebug() << "Dooble";
+	    qDebug() << " --attach";
+	    qDebug() << " --executable-current-url PROGRAM";
+	    qDebug() << " --full-screen";
+	    qDebug() << " --help";
+	    qDebug() << " --listen";
+	    qDebug() << " --load-url URL";
+	    qDebug() << " --private";
+	    qDebug() << " --test-aes";
+	    qDebug() << " --test-aes-performance";
+	    qDebug() << " --test-threefish";
+	    qDebug() << " --test-threefish-performance";
+	    return EXIT_SUCCESS;
+	  }
 	else if(strcmp(argv[i], "--load-url") == 0)
 	  {
 	    i += 1;
@@ -347,17 +366,21 @@ int main(int argc, char *argv[])
   ** Create a splash screen.
   */
 
-  QElapsedTimer t;
-  QSplashScreen splash(QPixmap(":/Miscellaneous/splash.png"));
-  auto splash_screen = dooble_settings::setting("splash_screen", true).toBool();
+  QSplashScreen splash;
+  auto splash_screen = dooble_settings::setting
+    ("splash_screen", true).toBool();
 
   if(splash_screen)
     {
+      QElapsedTimer t;
+
       splash.setEnabled(false);
+      splash.setPixmap(QPixmap(":/Miscellaneous/splash.png"));
       splash.show();
       splash.showMessage
 	(QObject::tr("Initializing Dooble's random number generator."),
-	 Qt::AlignBottom | Qt::AlignHCenter);
+	 Qt::AlignBottom | Qt::AlignHCenter,
+	 QColor(Qt::white));
       t.start();
 
       while(t.elapsed() < 500)
@@ -380,7 +403,8 @@ int main(int argc, char *argv[])
     {
       splash.showMessage
 	(QObject::tr("Purging temporary database entries."),
-	 Qt::AlignBottom | Qt::AlignHCenter);
+	 Qt::AlignBottom | Qt::AlignHCenter,
+	 QColor(Qt::white));
       splash.repaint();
       dooble::s_application->processEvents();
     }
@@ -392,7 +416,8 @@ int main(int argc, char *argv[])
     {
       splash.showMessage
 	(QObject::tr("Preparing QWebEngine."),
-	 Qt::AlignBottom | Qt::AlignHCenter);
+	 Qt::AlignBottom | Qt::AlignHCenter,
+	 QColor(Qt::white));
       splash.repaint();
       dooble::s_application->processEvents();
     }
@@ -454,7 +479,8 @@ int main(int argc, char *argv[])
   if(splash_screen)
     {
       splash.showMessage(QObject::tr("Preparing Dooble objects."),
-			 Qt::AlignBottom | Qt::AlignHCenter);
+			 Qt::AlignBottom | Qt::AlignHCenter,
+			 QColor(Qt::white));
       splash.repaint();
       dooble::s_application->processEvents();
     }
@@ -563,7 +589,8 @@ int main(int argc, char *argv[])
   if(splash_screen)
     {
       splash.showMessage(QObject::tr("Populating Dooble containers."),
-			 Qt::AlignBottom | Qt::AlignHCenter);
+			 Qt::AlignBottom | Qt::AlignHCenter,
+			 QColor(Qt::white));
       splash.repaint();
       dooble::s_application->processEvents();
 
@@ -571,13 +598,17 @@ int main(int argc, char *argv[])
 	splash.repaint();
 
       splash.showMessage(QObject::tr("Opening Dooble."),
-			 Qt::AlignBottom | Qt::AlignHCenter);
+			 Qt::AlignBottom | Qt::AlignHCenter,
+			 QColor(Qt::white));
       splash.repaint();
       dooble::s_application->processEvents();
       splash.finish(d);
     }
 
-  QTimer::singleShot(0, d, SLOT(show(void)));
+  if(!full_screen)
+    QTimer::singleShot(0, d, SLOT(show(void)));
+  else
+    QTimer::singleShot(0, d, SLOT(showFullScreen(void)));
 
   auto rc = dooble::s_application->exec();
 

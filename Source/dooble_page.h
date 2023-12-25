@@ -32,7 +32,6 @@
 #include <QTimer>
 #include <QWebEnginePage>
 #include <QWebEngineSettings>
-#include <QWidget>
 
 #include "dooble_settings.h"
 #include "ui_dooble_page.h"
@@ -43,6 +42,7 @@ class QWebEngineSettings;
 class QWebEngineView;
 class dooble;
 class dooble_address_widget;
+class dooble_javascript;
 class dooble_popup_menu;
 class dooble_web_engine_view;
 
@@ -85,6 +85,7 @@ class dooble_page: public QWidget
   void hide_location_frame(bool state);
   void hide_status_bar(bool state);
   void inject_custom_css(void);
+  void javascript_console(void);
   void load(const QUrl &url);
   void prepare_export_as_png(const QString &file_name);
   void print_page(QPrinter *printer);
@@ -113,6 +114,7 @@ class dooble_page: public QWidget
   QPointer<QAction> m_full_screen_action;
   QPointer<QAction> m_settings_action;
   QPointer<QProgressDialog> m_export_as_png_progress_dialog;
+  QPointer<dooble_javascript> m_javascript_console;
   QString m_export_png_file_name;
   QTimer m_export_png_timer;
   QTimer m_reload_timer;
@@ -175,6 +177,7 @@ class dooble_page: public QWidget
   void slot_icon_changed(const QIcon &icon);
   void slot_inject_custom_css(void);
   void slot_javascript_allow_popup_exception(void);
+  void slot_javascript_console(void);
   void slot_link_hovered(const QString &url);
   void slot_load_finished(bool ok);
   void slot_load_page(void);

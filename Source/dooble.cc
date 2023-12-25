@@ -108,7 +108,6 @@ dooble::dooble(QWidget *widget):QMainWindow()
   initialize_static_members();
   m_anonymous_tab_headers = false;
   m_floating_digital_clock_dialog = nullptr;
-  m_floating_digital_clock_timer.start(1000);
   m_is_javascript_dialog = false;
   m_is_private = false;
   m_menu = new QMenu(this);
@@ -154,7 +153,6 @@ dooble::dooble(const QList<QUrl> &urls, bool is_private, bool attach):
   initialize_static_members();
   m_anonymous_tab_headers = false;
   m_floating_digital_clock_dialog = nullptr;
-  m_floating_digital_clock_timer.start(1000);
   m_is_javascript_dialog = false;
   m_is_private = is_private;
   m_menu = new QMenu(this);
@@ -271,7 +269,6 @@ dooble::dooble(dooble_page *page):QMainWindow()
   initialize_static_members();
   m_anonymous_tab_headers = false;
   m_floating_digital_clock_dialog = nullptr;
-  m_floating_digital_clock_timer.start(1000);
   m_is_javascript_dialog = false;
   m_is_private = page ? page->is_private() : false;
   m_menu = new QMenu(this);
@@ -306,7 +303,6 @@ dooble::dooble(dooble_web_engine_view *view):QMainWindow()
   initialize_static_members();
   m_anonymous_tab_headers = false;
   m_floating_digital_clock_dialog = nullptr;
-  m_floating_digital_clock_timer.start(1000);
   m_is_javascript_dialog = false;
   m_is_private = view ? view->is_private() : false;
   m_menu = new QMenu(this);
@@ -2380,6 +2376,10 @@ void dooble::prepare_standard_menus(void)
 		  this,
 		  SLOT(slot_inject_custom_css(void)))->setEnabled
     (page && page->url().scheme().startsWith("http"));
+  menu->addAction(tr("JavaScript Console..."),
+		  this,
+		  SLOT(slot_javascript_console(void)))->setEnabled
+    (page && page->url().scheme().startsWith("http"));
   menu->addSeparator();
   menu->addAction
     (tr("Page Floating &Menu..."),
@@ -2889,10 +2889,10 @@ void dooble::remove_page_connections(dooble_page *page)
 
 void dooble::setWindowTitle(const QString &text)
 {
-  if(m_is_private)
+  if(m_is_private && text.trimmed().length() > 0)
     QMainWindow::setWindowTitle(tr("%1 (Private)").arg(text.trimmed()));
-  else
-    QMainWindow::setWindowTitle(text);
+  else if(text.trimmed().length() > 0)
+    QMainWindow::setWindowTitle(text.trimmed());
 }
 
 void dooble::show(void)
@@ -2903,6 +2903,23 @@ void dooble::show(void)
 					   toByteArray()));
 
   QMainWindow::show();
+
+  if(!s_warned_of_missing_sqlite_driver)
+    {
+      s_warned_of_missing_sqlite_driver = true;
+      QTimer::singleShot
+	(2500, this, SLOT(slot_warn_of_missing_sqlite_driver(void)));
+    }
+}
+
+void dooble::showFullScreen(void)
+{
+  if(dooble_settings::setting("save_geometry").toBool())
+    restoreGeometry(QByteArray::fromBase64(dooble_settings::
+					   setting("dooble_geometry").
+					   toByteArray()));
+
+  QMainWindow::showFullScreen();
 
   if(!s_warned_of_missing_sqlite_driver)
     {
@@ -3860,6 +3877,16 @@ void dooble::slot_inject_custom_css(void)
   page->inject_custom_css();
 }
 
+void dooble::slot_javascript_console(void)
+{
+  auto page = current_page();
+
+  if(!page)
+    return;
+
+  page->javascript_console();
+}
+
 void dooble::slot_load_finished(bool ok)
 {
   Q_UNUSED(ok);
@@ -4709,7 +4736,7 @@ void dooble::slot_show_floating_digital_clock(void)
   m_floating_digital_clock_dialog->update();
 
   if(!m_floating_digital_clock_timer.isActive())
-    m_floating_digital_clock_timer.start();
+    m_floating_digital_clock_timer.start(1000);
 
   slot_floating_digital_dialog_timeout();
 }
@@ -5245,6 +5272,7 @@ void dooble::slot_vacuum_databases(void)
        << "dooble_downloads.db"
        << "dooble_favicons.db"
        << "dooble_history.db"
+       << "dooble_javascript.db"
        << "dooble_search_engines.db"
        << "dooble_settings.db"
        << "dooble_style_sheets.db";

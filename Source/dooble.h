@@ -30,7 +30,6 @@
 
 #include <QFuture>
 #include <QLocalServer>
-#include <QMainWindow>
 #include <QShortcut>
 #include <QPointer>
 #include <QPrinter>
@@ -126,6 +125,7 @@ class dooble: public QMainWindow
 
  public slots:
   void show(void);
+  void showFullScreen(void);
 
  protected:
   void closeEvent(QCloseEvent *event);
@@ -241,6 +241,7 @@ class dooble: public QMainWindow
   void slot_history_favorites_populated(void);
   void slot_icon_changed(const QIcon &icon);
   void slot_inject_custom_css(void);
+  void slot_javascript_console(void);
   void slot_load_finished(bool ok);
   void slot_new_local_connection(void);
   void slot_new_private_window(void);
