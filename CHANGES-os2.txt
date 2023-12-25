@@ -4,6 +4,11 @@ History of OS/2-specific changes for Dooble
 This file contains only OS/2-specific changes. Dooble's own changes are listed
 under Dooble's "Help -> Release Notes" main menu entry.
 
+Version 2023.12.25 (2023.12.25)
+-------------------------------
+
+-Dry build, source updated to release 2023.11.30
+
 Version 2023.11.30 (2013-11-25)
 -------------------------------
 
