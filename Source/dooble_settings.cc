@@ -1073,7 +1073,7 @@ void dooble_settings::prepare_icons(void)
 		      QIcon(QString(":/%1/64/windows.png").arg(icon_set))));
 
   QSize size(0, 0);
-  static auto list(QList<QToolButton *> () << m_ui.cache
+  static auto list(QList<QPushButton *> () << m_ui.cache
 		                           << m_ui.display
 		                           << m_ui.history
 		                           << m_ui.privacy
@@ -1081,8 +1081,13 @@ void dooble_settings::prepare_icons(void)
 		                           << m_ui.windows);
 
   foreach(auto i, list)
-    if(i->height() >= size.height() || i->width() >= size.width())
-      size = i->size();
+    {
+      if(i->height() >= size.height() || i->width() >= size.width())
+	size = i->size();
+
+      if(i->styleSheet().isEmpty())
+	i->setStyleSheet("QPushButton {padding: 10px; text-align: left;}");
+    }
 
   size.setHeight(size.height() + 10);
   size.setWidth(size.width() + 10);
@@ -1195,10 +1200,10 @@ void dooble_settings::prepare_web_engine_environment_variables(void)
       	if(first_time)
       	  {
 #ifdef Q_OS_OS2
-	     /*
-	     ** On OS/2, single-process mode should be default for now
-	     ** due to stability issues with multi-process mode.
-	     */
+	    /*
+	    ** On OS/2, single-process mode should be default for now
+	    ** due to stability issues with multi-process mode.
+	    */
 
 	    query.exec
 	      ("INSERT OR IGNORE INTO dooble_web_engine_settings "
@@ -1215,13 +1220,30 @@ void dooble_settings::prepare_web_engine_environment_variables(void)
 	if(query.exec())
 	  while(query.next())
 	    {
+	      auto key(query.value(0).toString().trimmed());
 	      auto singular = s_web_engine_settings_environment.
-		value(query.value(0).toString().trimmed()) == "singular";
+		value(key) == "singular";
 
 	      if(query.value(1).toBool() == false && singular)
-		continue;
+		{
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 6, 0))
+		  if(key == "--disable-reading-from-canvas")
+		    QWebEngineSettings::defaultSettings()->setAttribute
+		      (QWebEngineSettings::ReadingFromCanvasEnabled, false);
+#endif
 
-	      string.append(query.value(0).toString().trimmed());
+		  continue;
+		}
+	      else
+		{
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 6, 0))
+		  if(key == "--disable-reading-from-canvas")
+		    QWebEngineSettings::defaultSettings()->setAttribute
+		      (QWebEngineSettings::ReadingFromCanvasEnabled, true);
+#endif
+		}
+
+	      string.append(key);
 
 	      if(!singular)
 		{
@@ -1863,7 +1885,7 @@ void dooble_settings::restore(bool read_database)
     (QWebEngineSettings::XSSAuditingEnabled, m_ui.xss_auditing->isChecked());
 #endif
   {
-    static auto list(QList<QToolButton *> () << m_ui.cache
+    static auto list(QList<QPushButton *> () << m_ui.cache
 		                             << m_ui.display
 		                             << m_ui.history
 		                             << m_ui.privacy
@@ -2763,12 +2785,12 @@ void dooble_settings::slot_new_javascript_block_popup_exception(void)
 
 void dooble_settings::slot_page_button_clicked(void)
 {
-  auto tool_button = qobject_cast<QToolButton *> (sender());
+  auto tool_button = qobject_cast<QPushButton *> (sender());
 
   if(!tool_button)
     return;
 
-  static auto list(QList<QToolButton *> () << m_ui.cache
+  static auto list(QList<QPushButton *> () << m_ui.cache
 		                           << m_ui.display
 		                           << m_ui.history
 		                           << m_ui.privacy
