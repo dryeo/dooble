@@ -26,6 +26,9 @@
 */
 
 #include <QFileDialog>
+#ifdef DOOBLE_PEEKABOO
+#include <QInputDialog>
+#endif
 #include <QLocalSocket>
 #include <QMessageBox>
 #include <QPainter>
@@ -227,7 +230,7 @@ dooble::dooble(const QList<QUrl> &urls, bool is_private, bool attach):
 	{
 	  if(urls.isEmpty())
 	    {
-	      socket.write(QUrl("about:blank").toEncoded().toBase64());
+	      socket.write(QUrl(ABOUT_BLANK).toEncoded().toBase64());
 	      socket.write("\n");
 	      socket.flush();
 	    }
@@ -579,7 +582,7 @@ dooble_page *dooble::new_page(const QUrl &url, bool is_private)
     m_ui.tab->setTabIcon
       (m_ui.tab->indexOf(page), dooble_favicons::icon(QUrl()));
   else
-    m_ui.tab->setTabIcon(m_ui.tab->indexOf(page), page->icon()); // Mac too!
+    m_ui.tab->setTabIcon(m_ui.tab->indexOf(page), page->icon()); // MacOS too!
 
   m_ui.tab->setTabsClosable(tabs_closable());
 
@@ -800,6 +803,11 @@ void dooble::connect_signals(void)
 	  SIGNAL(anonymous_tab_headers(bool)),
 	  this,
 	  SLOT(slot_anonymous_tab_headers(bool)),
+	  Qt::UniqueConnection);
+  connect(m_ui.tab,
+	  SIGNAL(clone_tab(int)),
+	  this,
+	  SLOT(slot_clone_tab(int)),
 	  Qt::UniqueConnection);
   connect(m_ui.tab,
 	  SIGNAL(currentChanged(int)),
@@ -1128,7 +1136,7 @@ void dooble::new_page(dooble_charts *chart)
     add_tab(chart, tr("XY Series Chart"));
 
   m_ui.tab->setTabIcon
-    (m_ui.tab->indexOf(chart), dooble_favicons::icon(QUrl())); // Mac too!
+    (m_ui.tab->indexOf(chart), dooble_favicons::icon(QUrl())); // MacOS too!
   m_ui.tab->setTabsClosable(tabs_closable());
 
   if(s_application->application_locked())
@@ -1187,7 +1195,7 @@ void dooble::new_page(dooble_page *page)
   else
     {
       add_tab(page, title.replace("&", "&&"));
-      m_ui.tab->setTabIcon(m_ui.tab->indexOf(page), page->icon()); // Mac too!
+      m_ui.tab->setTabIcon(m_ui.tab->indexOf(page), page->icon()); // MacOS too!
       m_ui.tab->setTabToolTip(m_ui.tab->indexOf(page), title);
     }
 
@@ -1251,7 +1259,7 @@ void dooble::new_page(dooble_web_engine_view *view)
     m_ui.tab->setTabIcon
       (m_ui.tab->indexOf(page), dooble_favicons::icon(QUrl()));
   else
-    m_ui.tab->setTabIcon(m_ui.tab->indexOf(page), page->icon()); // Mac too!
+    m_ui.tab->setTabIcon(m_ui.tab->indexOf(page), page->icon()); // MacOS too!
 
   m_ui.tab->setTabsClosable(tabs_closable());
 
@@ -1928,6 +1936,9 @@ void dooble::prepare_shortcuts(void)
       m_shortcuts << new QShortcut(QKeySequence(tr("Ctrl+S")),
 				   this,
 				   SLOT(slot_save(void)));
+      m_shortcuts << new QShortcut(QKeySequence(tr("Ctrl+Shift+C")),
+				   this,
+				   SLOT(slot_clone_tab(void)));
       m_shortcuts << new QShortcut(QKeySequence(tr("Ctrl+Shift+P")),
 				   this,
 				   SLOT(slot_new_private_window(void)));
@@ -3622,6 +3633,57 @@ void dooble::slot_clear_visited_links(void)
     m_web_engine_profile->clearAllVisitedLinks();
 }
 
+void dooble::slot_clone_tab(int index)
+{
+  auto page = qobject_cast<dooble_page *> (m_ui.tab->widget(index));
+
+  if(!page)
+    return;
+
+  auto clone = new_page(page->url(), page->is_private());
+
+  if(!clone)
+    return;
+
+  clone->enable_web_setting
+    (QWebEngineSettings::JavascriptEnabled,
+     page->is_web_setting_enabled(QWebEngineSettings::JavascriptEnabled));
+  clone->enable_web_setting
+    (QWebEngineSettings::PluginsEnabled,
+     page->is_web_setting_enabled(QWebEngineSettings::PluginsEnabled));
+  clone->enable_web_setting
+    (QWebEngineSettings::WebGLEnabled,
+     page->is_web_setting_enabled(QWebEngineSettings::WebGLEnabled));
+  clone->reload_periodically(page->reload_periodically_seconds());
+  clone->user_hide_location_frame(page->is_location_frame_user_hidden());
+
+  QBuffer buffer;
+  QByteArray bytes;
+
+  buffer.setBuffer(&bytes);
+
+  if(buffer.open(QIODevice::WriteOnly))
+    {
+      QDataStream stream(&buffer);
+
+      stream << *(page->view()->page()->history());
+    }
+
+  buffer.close();
+
+  if(buffer.open(QIODevice::ReadOnly))
+    {
+      QDataStream stream(&buffer);
+
+      stream >> *(clone->view()->page()->history());
+    }
+}
+
+void dooble::slot_clone_tab(void)
+{
+  slot_clone_tab(m_ui.tab->currentIndex());
+}
+
 void dooble::slot_close_tab(void)
 {
   if(m_ui.tab->count() <= 1)
@@ -4046,7 +4108,13 @@ void dooble::slot_open_local_file(void)
   if(dialog.exec() == QDialog::Accepted)
     {
       QApplication::processEvents();
-      page->load(QUrl::fromUserInput(dialog.selectedFiles().value(0)));
+
+      auto url(QUrl::fromUserInput(dialog.selectedFiles().value(0)));
+
+      if(QFileInfo(dialog.selectedFiles().value(0)).suffix().toLower() == "jar")
+	url.setScheme("jar");
+
+      page->load(url);
     }
 
   QApplication::processEvents();

@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 # Alexis Megas.
 
+dictionaries=qtwebengine_dictionaries
 export AA_ENABLEHIGHDPISCALING=1
 export AA_USEHIGHDPIPIXMAPS=1
 
@@ -28,6 +29,7 @@ export QT_X11_NO_MITSHM=1
 if [ -r ./Dooble ] && [ -x ./Dooble ]
 then
     echo "Launching a local Dooble."
+    export QTWEBENGINE_DICTIONARIES_PATH=$dictionaries
 
     if [ -r ./Lib ]
     then
@@ -44,13 +46,19 @@ then
 elif [ -r /opt/dooble/Dooble ] && [ -x /opt/dooble/Dooble ]
 then
     echo "Launching an official Dooble."
+    export DOOBLE_TRANSLATIONS_PATH=/opt/dooble/Translations
     export LD_LIBRARY_PATH=/opt/dooble/Lib
+    export QTWEBENGINE_DICTIONARIES_PATH=/opt/dooble/$dictionaries
     export QT_PLUGIN_PATH=/opt/dooble/plugins
     cd /opt/dooble && exec ./Dooble "$@"
     exit $?
 elif [ -r /usr/local/dooble/Dooble ] && [ -x /usr/local/dooble/Dooble ]
 then
     echo "Launching an official Dooble."
+    export DOOBLE_TRANSLATIONS_PATH=/usr/local/dooble/Translations
+    export LD_LIBRARY_PATH=/usr/local/dooble/Lib
+    export QTWEBENGINE_DICTIONARIES_PATH=/usr/local/dooble/$dictionaries
+    export QT_PLUGIN_PATH=/usr/local/dooble/plugins
     cd /usr/local/dooble && exec ./Dooble "$@"
     exit $?
 else

@@ -30,6 +30,7 @@
 
 #include "dooble.h"
 #include "dooble_application.h"
+#include "dooble_favicons.h"
 #include "dooble_page.h"
 #include "dooble_tab_bar.h"
 #include "dooble_tab_widget.h"
@@ -153,6 +154,10 @@ dooble_tab_widget::dooble_tab_widget(QWidget *parent):QTabWidget(parent)
 	  this,
 	  SIGNAL(anonymous_tab_headers(bool)));
   connect(m_tab_bar,
+	  SIGNAL(clone_tab(int)),
+	  this,
+	  SIGNAL(clone_tab(int)));
+  connect(m_tab_bar,
 	  SIGNAL(decouple_tab(int)),
 	  this,
 	  SIGNAL(decouple_tab(int)));
@@ -270,12 +275,23 @@ void dooble_tab_widget::prepare_icons(void)
 		      QIcon(QString(":/%1/18/pulldown.png").arg(icon_set))));
 }
 
-void dooble_tab_widget::prepare_tab_label(int index, const QIcon &icon)
+void dooble_tab_widget::prepare_tab_label(int index, const QIcon &i)
 {
+  auto icon(i);
   auto side = static_cast<QTabBar::ButtonPosition>
     (style()->styleHint(QStyle::SH_TabBar_CloseButtonPosition,
 			nullptr,
 			m_tab_bar));
+
+  if(icon.isNull()) // Qt 6
+    {
+      auto page = qobject_cast<dooble_page *> (widget(index));
+
+      if(page)
+	icon = dooble_favicons::icon(page->url());
+      else
+	icon = dooble_favicons::icon(QUrl());
+    }
 
 #ifdef Q_OS_MACOS
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))

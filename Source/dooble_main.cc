@@ -274,9 +274,6 @@ int main(int argc, char *argv[])
   QWebEngineUrlScheme::registerScheme(scheme);
 #endif
 #endif
-#ifdef Q_OS_MACOS
-  QDir::setCurrent("/Applications/Dooble.d");
-#endif
   QString dooble_settings_path("");
 #if defined(Q_OS_WIN)
   auto bytes(qgetenv("DOOBLE_HOME").trimmed());
@@ -404,7 +401,7 @@ int main(int argc, char *argv[])
 
 #ifdef Q_OS_MACOS
   /*
-  ** Eliminate pool errors on OS X.
+  ** Eliminate pool errors on MacOS.
   */
 
   CocoaInitializer cocoa_initializer;

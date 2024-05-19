@@ -254,6 +254,8 @@ dooble_settings::dooble_settings(void):dooble_main_window()
 	  if(!file_info.exists())
 	    m_ui.language_directory->setText
 	      (tr("<b>Warning!</b> The file %1 does not exist. "
+		  "Dooble searched DOOBLE_TRANSLATIONS_PATH and "
+		  "the relative Translations directories. "
 		  "The System option has been disabled. English "
 		  "will be assumed. Please read %2, line %3.").
 	       arg(file_info.absoluteFilePath()).
@@ -262,6 +264,8 @@ dooble_settings::dooble_settings(void):dooble_main_window()
 	  else
 	    m_ui.language_directory->setText
 	      (tr("<b>Warning!</b> The file %1 is not readable. "
+		  "Dooble searched DOOBLE_TRANSLATIONS_PATH and "
+		  "the relative Translations directories. "
 		  "The System option has been disabled. English "
 		  "will be assumed. Please read %2, line %3.").
 	       arg(file_info.absoluteFilePath()).
@@ -277,10 +281,12 @@ dooble_settings::dooble_settings(void):dooble_main_window()
 	    ("QLabel {background-color: #f2dede; border: 1px solid #ebccd1;"
 	     "color:#a94442;}");
 	  m_ui.language_directory->setText
-	    (tr("<b>Warning!</b> The file %1 is perhaps incomplete. "
+	    (tr("<b>Warning!</b> The file %1 is perhaps incomplete. It "
+		"contains only %2 bytes. "
 		"The System option has been disabled. English "
-		"will be assumed. Please read %2, line %3.").
+		"will be assumed. Please read %3, line %4.").
 	     arg(file_info.absoluteFilePath()).
+	     arg(file_info.size()).
 	     arg(__FILE__).
 	     arg(__LINE__));
 	}
@@ -327,6 +333,7 @@ dooble_settings::dooble_settings(void):dooble_main_window()
   s_settings["favicons"] = true;
   s_settings["favorites_sort_index"] = 1; // Most Popular
   s_settings["features_permissions"] = true;
+  s_settings["full_screen"] = true;
   s_settings["hash_type"] = "SHA3-512";
   s_settings["hash_type_index"] = 1;
   s_settings["home_url"] = QUrl();
@@ -493,8 +500,19 @@ dooble_settings::dooble_settings(void):dooble_main_window()
 
   restore(true);
   prepare_icons();
+  prepare_shortcuts();
   show_qtwebengine_dictionaries_warning_label();
   slot_password_changed();
+}
+
+QString dooble_settings::shortcut(const QString &action) const
+{
+  auto item = m_shortcuts_model->findItems(action).value(0);
+
+  if(item && m_shortcuts_model->index(item->row(), 1).isValid())
+    return m_shortcuts_model->index(item->row(), 1).data().toString();
+  else
+    return "";
 }
 
 QString dooble_settings::cookie_policy_string(int index)
@@ -758,6 +776,28 @@ void dooble_settings::add_shortcut(QObject *object)
 	  m_ui.shortcuts->resizeColumnToContents(0);
 	  m_ui.shortcuts->sortByColumn(0, Qt::AscendingOrder);
 	}
+    }
+}
+
+void dooble_settings::add_shortcut
+(const QString &action, const QString &shortcut)
+{
+  if(action.trimmed().isEmpty() || shortcut.trimmed().isEmpty())
+    return;
+
+  if(m_shortcuts_model->findItems(action.trimmed()).isEmpty())
+    {
+      QList<QStandardItem *> items;
+      auto item = new QStandardItem(action.trimmed());
+
+      item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+      items << item;
+      item = new QStandardItem(shortcut);
+      item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+      items << item;
+      m_shortcuts_model->appendRow(items);
+      m_ui.shortcuts->resizeColumnToContents(0);
+      m_ui.shortcuts->sortByColumn(0, Qt::AscendingOrder);
     }
 }
 
@@ -1150,6 +1190,8 @@ void dooble_settings::prepare_proxy(bool save)
 void dooble_settings::prepare_shortcuts(void)
 {
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+  add_shortcut(tr("VIM Scroll Down"), tr("Ctrl+Shift+J"));
+  add_shortcut(tr("VIM Scroll Up"), tr("Ctrl+Shift+K"));
   QApplication::restoreOverrideCursor();
 }
 
@@ -1580,6 +1622,7 @@ void dooble_settings::restore(bool read_database)
   m_ui.favicons->setChecked(s_settings.value("favicons", true).toBool());
   m_ui.features_permissions_groupbox->setChecked
     (s_settings.value("features_permissions", true).toBool());
+  m_ui.full_screen->setChecked(s_settings.value("full_screen", true).toBool());
   m_ui.hash->setCurrentIndex
     (qBound(0,
 	    s_settings.value("hash_type_index", 1).toInt(), // SHA3-512
@@ -2279,19 +2322,22 @@ void dooble_settings::show_panel(dooble_settings::Panels panel)
 
 void dooble_settings::show_qtwebengine_dictionaries_warning_label(void)
 {
-  m_ui.qtwebengine_dictionaries_warning_label->setText
-    (tr("<b>Warning!</b> "
-	"The directory qtwebengine_dictionaries cannot be accessed. "
-	"Please read %1, line %2.").arg(__FILE__).arg(__LINE__));
   m_ui.qtwebengine_dictionaries_warning_label->setVisible(false);
 
   auto bytes(qgetenv("QTWEBENGINE_DICTIONARIES_PATH"));
 
   if(bytes.trimmed().isEmpty())
     {
-      bytes = "qtwebengine_dictionaries";
+      auto directory
+	(QDir::currentPath() + QDir::separator() + "qtwebengine_dictionaries");
 
-      if(!QFileInfo(bytes).isReadable())
+      m_ui.qtwebengine_dictionaries_warning_label->setText
+	(tr("<b>Warning!</b> "
+	    "The directory qtwebengine_dictionaries cannot be accessed. "
+	    "Dooble searched %1. Please read %2, line %3.").
+	 arg(directory).arg(__FILE__).arg(__LINE__));
+
+      if(!QFileInfo(directory).isReadable())
 	{
 	  m_ui.qtwebengine_dictionaries_warning_label->setVisible(true);
 	  return;
@@ -2299,6 +2345,11 @@ void dooble_settings::show_qtwebengine_dictionaries_warning_label(void)
     }
   else if(!QFileInfo(bytes).isReadable())
     {
+      m_ui.qtwebengine_dictionaries_warning_label->setText
+	(tr("<b>Warning!</b> "
+	    "The directory qtwebengine_dictionaries cannot be accessed. "
+	    "Dooble searched %1. Please read %2, line %3.").
+	 arg(bytes.constData()).arg(__FILE__).arg(__LINE__));
       m_ui.qtwebengine_dictionaries_warning_label->setVisible(true);
       return;
     }
@@ -2620,6 +2671,7 @@ void dooble_settings::slot_apply(void)
   set_setting("favicons", m_ui.favicons->isChecked());
   set_setting
     ("features_permissions", m_ui.features_permissions_groupbox->isChecked());
+  set_setting("full_screen", m_ui.full_screen->isChecked());
 
   if(m_ui.home_url->text().trimmed().isEmpty())
     set_setting("home_url", QUrl());
