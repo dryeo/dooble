@@ -1402,6 +1402,12 @@ void dooble::prepare_page_connections(dooble_page *page)
 	  static_cast<Qt::ConnectionType> (Qt::AutoConnection |
 					   Qt::UniqueConnection));
   connect(page,
+	  SIGNAL(clone(void)),
+	  this,
+	  SLOT(slot_clone_tab(void)),
+	  static_cast<Qt::ConnectionType> (Qt::AutoConnection |
+					   Qt::UniqueConnection));
+  connect(page,
 	  SIGNAL(close_tab(void)),
 	  this,
 	  SLOT(slot_close_tab(void)),
@@ -1936,9 +1942,6 @@ void dooble::prepare_shortcuts(void)
       m_shortcuts << new QShortcut(QKeySequence(tr("Ctrl+S")),
 				   this,
 				   SLOT(slot_save(void)));
-      m_shortcuts << new QShortcut(QKeySequence(tr("Ctrl+Shift+C")),
-				   this,
-				   SLOT(slot_clone_tab(void)));
       m_shortcuts << new QShortcut(QKeySequence(tr("Ctrl+Shift+P")),
 				   this,
 				   SLOT(slot_new_private_window(void)));
@@ -2717,6 +2720,10 @@ void dooble::remove_page_connections(dooble_page *page)
 	     SIGNAL(clear_downloads(void)),
 	     this,
 	     SLOT(slot_clear_downloads(void)));
+  disconnect(page,
+	     SIGNAL(clone(void)),
+	     this,
+	     SLOT(slot_clone_tab(void)));
   disconnect(page,
 	     SIGNAL(close_tab(void)),
 	     this,
@@ -3635,6 +3642,9 @@ void dooble::slot_clear_visited_links(void)
 
 void dooble::slot_clone_tab(int index)
 {
+  repaint();
+  QApplication::processEvents();
+
   auto page = qobject_cast<dooble_page *> (m_ui.tab->widget(index));
 
   if(!page)
@@ -3645,6 +3655,7 @@ void dooble::slot_clone_tab(int index)
   if(!clone)
     return;
 
+  QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
   clone->enable_web_setting
     (QWebEngineSettings::JavascriptEnabled,
      page->is_web_setting_enabled(QWebEngineSettings::JavascriptEnabled));
@@ -3677,6 +3688,8 @@ void dooble::slot_clone_tab(int index)
 
       stream >> *(clone->view()->page()->history());
     }
+
+  QApplication::restoreOverrideCursor();
 }
 
 void dooble::slot_clone_tab(void)
