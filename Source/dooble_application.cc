@@ -25,7 +25,6 @@
 ** DOOBLE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <QCoreApplication>
 #include <QDir>
 #include <QTranslator>
 
@@ -81,28 +80,14 @@ void dooble_application::install_translator(void)
       auto const variable(qgetenv("DOOBLE_TRANSLATIONS_PATH").trimmed());
 
       if(!variable.isEmpty())
-	paths.append(QString::fromLocal8Bit(variable.constData()));
-      else
-	{
-	  paths.append(QCoreApplication::applicationDirPath() + QDir::separator() + "Translations");
-	  paths.append("/usr/local/share/dooble/translations");
-	  paths.append("/opt/local/share/dooble/translations");
-	  paths.append("/usr/share/dooble/translations");
-	  paths.append("/opt/share/dooble/translations");
-	  paths.append("/@unixroot/usr/local/share/dooble/translations");
-	  paths.append("/@unixroot/usr/share/dooble/translations");
-	}
+	path = QString::fromLocal8Bit(variable.constData());
+
+      if(path.isEmpty())
+	path = QDir::currentPath() + QDir::separator() + "Translations";
 
       m_translator = new QTranslator(this);
-      int i;
 
-      for(i = 0; i < paths.size(); ++i)
-	{
-	  if(m_translator->load("dooble_" + name, paths[i]))
-	    break;
-	}
-
-      if(i < paths.size())
+      if(m_translator->load("dooble_" + name, path))
 	{
 	  if(!installTranslator(m_translator))
 	    qDebug() << "Translator m_translator was not installed.";
@@ -110,25 +95,19 @@ void dooble_application::install_translator(void)
       else
 	qDebug() << "Translation file"
 		 << "dooble_" + name + ".qm"
-		 << "was not found in " << paths;
+		 << "was not found.";
 
+      auto other = new QTranslator(this);
 
-      // Only load qtbase translations if Dooble translations come from its
-      // executable directory or from DOOBLE_TRANSLATIONS_PATH override.
-      if (i == 0)
+      if(other->load("qtbase_" + name, path))
 	{
-	  auto other = new QTranslator(this);
-
-	if(other->load("qtbase_" + name, paths[0]))
-	  {
-	    if(!installTranslator(other))
-	      qDebug() << "Translator other was not installed.";
-	  }
-	else
-	  qDebug() << "Translation file"
-		   << "qtbase_" + name + ".qm"
-		   << "was not found in " << paths[0];
+	  if(!installTranslator(other))
+	    qDebug() << "Translator other was not installed.";
 	}
+      else
+	qDebug() << "Translation file"
+		 << "qtbase_" + name + ".qm"
+		 << "was not found.";
     }
 }
 
