@@ -80,8 +80,9 @@ void dooble_certificate_exceptions::exception_accepted(const QString &error,
 
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 
-  auto list(m_ui.table->findItems(url.toString(),
-				  Qt::MatchEndsWith | Qt::MatchStartsWith));
+  auto const list
+    (m_ui.table->findItems(url.toString(),
+			   Qt::MatchEndsWith | Qt::MatchStartsWith));
 
   QApplication::restoreOverrideCursor();
 
@@ -131,8 +132,9 @@ void dooble_certificate_exceptions::remove_exception(const QUrl &url)
 {
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 
-  auto list(m_ui.table->findItems(url.toString(),
-				  Qt::MatchEndsWith | Qt::MatchStartsWith));
+  auto const list
+    (m_ui.table->findItems(url.toString(),
+			   Qt::MatchEndsWith | Qt::MatchStartsWith));
 
   QApplication::restoreOverrideCursor();
 
@@ -360,7 +362,7 @@ void dooble_certificate_exceptions::slot_populate(void)
   for(int i = 0; i < list.size(); i++)
     {
       QTableWidgetItem *item = nullptr;
-      const auto &hash(list.at(i));
+      auto const hash(list.at(i));
 
       item = new QTableWidgetItem(hash.value("url").toString());
       item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
@@ -388,8 +390,8 @@ void dooble_certificate_exceptions::slot_search_timer_timeout(void)
 {
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 
+  auto const text(m_ui.search->text().toLower().trimmed());
   auto count = m_ui.table->rowCount();
-  auto text(m_ui.search->text().toLower().trimmed());
 
   for(int i = 0; i < m_ui.table->rowCount(); i++)
     if(text.isEmpty())

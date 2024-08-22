@@ -5,8 +5,14 @@
 cache()
 include(dooble-source.pro)
 
-exists(/opt/homebrew/Cellar/qt/6.6.1/share/qt/libexec/qwebengine_convert_dict) {
-CT = "/opt/homebrew/Cellar/qt/6.6.1/share/qt/libexec/qwebengine_convert_dict"
+macx {
+exists(/opt/homebrew/Cellar/qt/6.7.0_1/share/qt/libexec/qwebengine_convert_dict) {
+CT = "/opt/homebrew/Cellar/qt/6.7.0_1/share/qt/libexec/qwebengine_convert_dict"
+}
+
+exists(/usr/local/Cellar/qt/6.7.0_1/share/qt/libexec/qwebengine_convert_dict) {
+CT = "/usr/local/Cellar/qt/6.7.0_1/share/qt/libexec/qwebengine_convert_dict"
+}
 } else {
 versionAtLeast(QT_VERSION, 6.0.0) {
 freebsd-* {
@@ -68,7 +74,7 @@ dict_base_paths = af_ZA/af_ZA \
                   uk_UA/uk_UA \
                   vi/vi_VN
 
-dmg.commands = hdiutil create ~/Dooble.dmg -volname Dooble -srcfolder Dooble.d
+dmg.commands = hdiutil create Dooble.dmg -volname Dooble -srcfolder Dooble.d
 } else:unix {
 dict_base_paths = af_ZA/af_ZA \
                   an_ES/an_ES \
@@ -91,8 +97,8 @@ dict_base_paths = af_ZA/af_ZA \
                   en/en_US \
                   en/en_ZA \
                   es/es_ANY \
-                  fr_FR/fr \
                   et_EE/et_EE \
+                  fr_FR/fr \
                   gd_GB/gd_GB \
                   gl/gl_ES \
                   gug/gug \
@@ -272,6 +278,7 @@ QMAKE_CXXFLAGS_RELEASE += -O3 \
                           -Werror \
                           -Wextra \
                           -Wformat=2 \
+                          -Wold-style-cast \
                           -Woverloaded-virtual \
                           -Wpointer-arith \
                           -Wstack-protector \
@@ -280,6 +287,7 @@ QMAKE_CXXFLAGS_RELEASE += -O3 \
                           -Wzero-as-null-pointer-constant \
                           -fPIE \
                           -fstack-protector-all \
+                          -funroll-loops \
                           -fwrapv \
                           -pedantic \
                           -std=c++17
@@ -289,16 +297,17 @@ QMAKE_CXXFLAGS_RELEASE += -O3 \
                           -Wall \
                           -Wcast-align \
                           -Wcast-qual \
-                          -Werror \
                           -Wextra \
                           -Wformat=2 \
+                          -Wno-c++20-attribute-extensions \
+                          -Wold-style-cast \
                           -Woverloaded-virtual \
                           -Wpointer-arith \
                           -Wstack-protector \
                           -Wstrict-overflow=5 \
-                          -Wzero-as-null-pointer-constant \
                           -fPIE \
                           -fstack-protector-all \
+                          -funroll-loops \
                           -fwrapv \
                           -pedantic \
                           -std=c++17
@@ -324,15 +333,17 @@ QMAKE_CXXFLAGS_RELEASE += -O3 \
                           -Wformat=2 \
                           -Wlogical-op \
                           -Wno-deprecated-copy \
+                          -Wold-style-cast \
                           -Woverloaded-virtual \
                           -Wpointer-arith \
                           -Wstack-protector \
-			  -Wstrict-overflow=5 \
+			  -Wstrict-overflow=1 \
 			  -Wstringop-overflow=4 \
                           -Wundef \
                           -Wzero-as-null-pointer-constant \
                           -fstack-clash-protection \
                           -fstack-protector-all \
+                          -funroll-loops \
                           -fwrapv \
                           -pedantic \
                           -std=c++17

@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
        << SIGSEGV
        << SIGTERM;
 
-  foreach(const auto i, list)
+  foreach(auto const i, list)
     {
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS) || defined(Q_OS_UNIX)
       memset(&signal_action, 0, sizeof(struct sigaction));
@@ -211,7 +211,9 @@ int main(int argc, char *argv[])
       sigemptyset(&signal_action.sa_mask);
       signal_action.sa_flags = 0;
 
-      if(sigaction(i, &signal_action, (struct sigaction *) nullptr))
+      if(sigaction(i,
+		   &signal_action,
+		   static_cast<struct sigaction *> (nullptr)) != 0)
 	std::cerr << "sigaction() failure on " << i << std::endl;
 #else
       signal(i, signal_handler);
@@ -227,7 +229,11 @@ int main(int argc, char *argv[])
   signal_action.sa_handler = SIG_IGN;
   sigemptyset(&signal_action.sa_mask);
   signal_action.sa_flags = 0;
-  sigaction(SIGPIPE, &signal_action, (struct sigaction *) nullptr);
+
+  if(sigaction(SIGPIPE,
+	       &signal_action,
+	       static_cast<struct sigaction *> (nullptr)) != 0)
+    std::cerr << "sigaction() failure on SIGPIPE" << std::endl;
 #endif
   qRegisterMetaType<QAbstractItemModel::LayoutChangeHint>
     ("QAbstractItemModel::LayoutChangeHint");
@@ -239,12 +245,12 @@ int main(int argc, char *argv[])
   qRegisterMetaType<QVector<qreal> > ("QVector<qreal>");
   qRegisterMetaType<Qt::SortOrder> ("Qt::SortOrder");
   qRegisterMetaType<dooble_charts::Properties> ("dooble_charts::Properties");
-#if defined(Q_OS_MACOS) || defined(Q_OS_WIN)
+#if defined(Q_OS_MACOS) || defined(Q_OS_WINDOWS)
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
   QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
   QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
 #endif
-#ifdef Q_OS_WIN
+#ifdef Q_OS_WINDOWS
   QCoreApplication::setAttribute(Qt::AA_UseSoftwareOpenGL, true);
 #endif
 #else
@@ -274,13 +280,10 @@ int main(int argc, char *argv[])
   QWebEngineUrlScheme::registerScheme(scheme);
 #endif
 #endif
-#ifdef Q_OS_MACOS
-  QDir::setCurrent("/Applications/Dooble.d");
-#endif
   QString dooble_settings_path("");
   dooble::s_application = new dooble_application(argc, argv);
-#if defined(Q_OS_WIN)
-  auto bytes(qgetenv("DOOBLE_HOME").trimmed());
+#if defined(Q_OS_WINDOWS)
+  auto const bytes(qgetenv("DOOBLE_HOME").trimmed());
 
   if(bytes.isEmpty())
     {
@@ -323,13 +326,13 @@ int main(int argc, char *argv[])
       dooble_settings::set_setting("home_path", dooble_settings_path = bytes);
     }
 #else
-  auto bytes(qgetenv("DOOBLE_HOME").trimmed());
+  auto const bytes(qgetenv("DOOBLE_HOME").trimmed());
 
   if(bytes.isEmpty())
     {
       QString dooble_directory(".dooble");
-      auto xdg_config_home(qgetenv("XDG_CONFIG_HOME").trimmed());
-      auto xdg_data_home(qgetenv("XDG_DATA_HOME").trimmed());
+      auto const xdg_config_home(qgetenv("XDG_CONFIG_HOME").trimmed());
+      auto const xdg_data_home(qgetenv("XDG_DATA_HOME").trimmed());
 
       if(xdg_config_home.isEmpty() && xdg_data_home.isEmpty())
 	{
@@ -399,7 +402,7 @@ int main(int argc, char *argv[])
 
 #ifdef Q_OS_MACOS
   /*
-  ** Eliminate pool errors on OS X.
+  ** Eliminate pool errors on MacOS.
   */
 
   CocoaInitializer cocoa_initializer;
@@ -497,7 +500,7 @@ int main(int argc, char *argv[])
   dooble::s_settings = new dooble_settings();
   dooble::s_settings->set_settings_path(dooble_settings_path);
 
-  auto arguments(QCoreApplication::arguments());
+  auto const arguments(QCoreApplication::arguments());
   auto d = new dooble // Not deleted.
     (urls,
      arguments.contains("--private") ||
@@ -617,7 +620,7 @@ int main(int argc, char *argv[])
   else
     QTimer::singleShot(0, d, SLOT(showFullScreen(void)));
 
-  auto rc = dooble::s_application->exec();
+  auto const rc = dooble::s_application->exec();
 
   dooble::clean();
   return static_cast<int> (rc);

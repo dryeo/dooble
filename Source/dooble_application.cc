@@ -40,9 +40,9 @@ dooble_application::dooble_application(int &argc, char **argv):
   m_application_locked = false;
   m_translator = nullptr;
 
-  auto font(this->font());
-  auto string
+  auto const string
     (dooble_settings::setting("display_application_font").toString().trimmed());
+  auto font(this->font());
 
   if(string.isEmpty() || !font.fromString(string))
     font = QApplication::font();
@@ -58,7 +58,7 @@ dooble_application::dooble_application(int &argc, char **argv):
 
 QString dooble_application::style_name(void) const
 {
-  static auto style_name
+  static auto const style_name
     (style() ? style()->objectName().toLower().trimmed() : "");
 
   return style_name;
@@ -76,25 +76,21 @@ void dooble_application::install_translator(void)
 
   if(dooble_settings::setting("language_index").toInt() == 1) // System
     {
-      // Should be in sync with dooble_settings.cc.
-      QStringList paths;
-      auto name(QLocale::system().name());
-      auto variable(qgetenv("DOOBLE_TRANSLATIONS_PATH").trimmed());
+      QString path("");
+      auto const name(QLocale::system().name());
+      auto const variable(qgetenv("DOOBLE_TRANSLATIONS_PATH").trimmed());
 
       if(!variable.isEmpty())
 	paths.append(QString::fromLocal8Bit(variable.constData()));
       else
 	{
 	  paths.append(QCoreApplication::applicationDirPath() + QDir::separator() + "Translations");
-#ifdef Q_OS_UNIX
 	  paths.append("/usr/local/share/dooble/translations");
 	  paths.append("/opt/local/share/dooble/translations");
 	  paths.append("/usr/share/dooble/translations");
 	  paths.append("/opt/share/dooble/translations");
-#elif defined(Q_OS_OS2)
 	  paths.append("/@unixroot/usr/local/share/dooble/translations");
 	  paths.append("/@unixroot/usr/share/dooble/translations");
-#endif
 	}
 
       m_translator = new QTranslator(this);

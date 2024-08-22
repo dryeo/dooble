@@ -47,13 +47,13 @@ QIcon dooble_favicons::icon(const QUrl &url)
 {
   if(!dooble::s_cryptography)
     return QIcon(":/Miscellaneous/blank_page.png");
-  else if(url == QUrl::fromUserInput("about:blank") ||
+  else if(url == QUrl::fromUserInput(dooble::ABOUT_BLANK) ||
 	  url.isEmpty() ||
-	  !url.isValid())
+	  url.isValid() == false)
     return QIcon(":/Miscellaneous/blank_page.png");
 
   QIcon icon;
-  auto database_name(dooble_database_utilities::database_name());
+  auto const database_name(dooble_database_utilities::database_name());
 
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
@@ -125,13 +125,13 @@ QIcon dooble_favicons::icon_from_host(const QUrl &url)
 {
   if(!dooble::s_cryptography)
     return QIcon(":/Miscellaneous/blank_page.png");
-  else if(url == QUrl::fromUserInput("about:blank") ||
+  else if(url == QUrl::fromUserInput(dooble::ABOUT_BLANK) ||
 	  url.isEmpty() ||
-	  !url.isValid())
+	  url.isValid() == false)
     return QIcon(":/Miscellaneous/blank_page.png");
 
   QIcon icon;
-  auto database_name(dooble_database_utilities::database_name());
+  auto const database_name(dooble_database_utilities::database_name());
 
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
@@ -218,7 +218,7 @@ void dooble_favicons::create_tables(QSqlDatabase &db)
 
 void dooble_favicons::purge(void)
 {
-  auto database_name(dooble_database_utilities::database_name());
+  auto const database_name(dooble_database_utilities::database_name());
 
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
@@ -244,7 +244,7 @@ void dooble_favicons::purge(void)
 
 void dooble_favicons::purge_temporary(void)
 {
-  auto database_name(dooble_database_utilities::database_name());
+  auto const database_name(dooble_database_utilities::database_name());
 
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
@@ -277,7 +277,7 @@ void dooble_favicons::save_favicon(const QIcon &icon, const QUrl &url)
      icon.isNull())
     return;
 
-  auto database_name(dooble_database_utilities::database_name());
+  auto const database_name(dooble_database_utilities::database_name());
 
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);

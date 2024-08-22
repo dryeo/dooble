@@ -160,7 +160,7 @@ void dooble_jar_implementation::list_directory_contents(void)
 
   QDir directory(m_url.path());
 
-  foreach(const auto &i,
+  foreach(auto const &i,
 	  directory.entryInfoList(QDir::AllDirs | QDir::Files | QDir::Readable,
 				  QDir::Name))
     {
@@ -226,12 +226,12 @@ void dooble_jar_implementation::slot_finished
       ** Total         Total %                    Count
       */
 
-      auto output(m_content.split('\n'));
+      auto const output(m_content.split('\n'));
 
       m_html += "<table>\n";
       m_html += "<tr>\n";
 
-      foreach(const auto &i, output.value(1).split(' '))
+      foreach(auto const &i, output.value(1).split(' '))
 	if(i.trimmed().size() > 0)
 	  m_html += "<th>" + i.trimmed() + "</th>\n";
 
@@ -239,13 +239,13 @@ void dooble_jar_implementation::slot_finished
 
       for(int i = 3; i < output.size() - 3; i++)
 	{
-	  auto bytes(output.at(i).trimmed());
+	  auto const bytes(output.at(i).trimmed());
 
 	  if(bytes.size() > 0)
 	    {
 	      m_html += "<tr>\n";
 
-	      auto list(bytes.split(' '));
+	      auto const list(bytes.split(' '));
 
 	      for(int j = 0; j < list.size(); j++)
 		if(list.at(j).trimmed().size() > 0)
@@ -254,7 +254,7 @@ void dooble_jar_implementation::slot_finished
 		      {
 			QString file("");
 
-			file = QString("<a href=\"zip://%1?%2\">%2</a>").
+			file = QString("<a href=\"jar://%1?%2\">%2</a>").
 			  arg(m_url.path()).arg(list.value(j).constData());
 
 			m_html += "<td>" + file.toUtf8() + "</td>\n";

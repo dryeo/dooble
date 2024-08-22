@@ -75,13 +75,14 @@ class dooble_page: public QWidget
   bool is_location_frame_hidden(void) const;
   bool is_location_frame_user_hidden(void) const;
   bool is_private(void) const;
+  bool is_web_setting_enabled(QWebEngineSettings::WebAttribute setting) const;
   dooble_address_widget *address_widget(void) const;
   dooble_popup_menu *popup_menu(void) const;
   dooble_web_engine_view *view(void) const;
   int reload_periodically_seconds(void) const;
   void download(const QString &file_name, const QUrl &url);
-  void enable_web_setting(QWebEngineSettings::WebAttribute setting,
-			  bool state);
+  void enable_web_setting
+    (QWebEngineSettings::WebAttribute setting, bool state);
   void hide_location_frame(bool state);
   void hide_status_bar(bool state);
   void inject_custom_css(void);
@@ -110,15 +111,19 @@ class dooble_page: public QWidget
   QMenu *m_menu;
   QPointer<QAction> m_action_close_tab;
   QPointer<QAction> m_authentication_action;
+  QPointer<QAction> m_clone_action;
+  QPointer<QAction> m_decreased_page_brightness_action;
   QPointer<QAction> m_find_action;
   QPointer<QAction> m_full_screen_action;
   QPointer<QAction> m_settings_action;
+  QPointer<QAction> m_status_bar_action;
   QPointer<QProgressDialog> m_export_as_png_progress_dialog;
   QPointer<dooble_javascript> m_javascript_console;
   QString m_export_png_file_name;
   QTimer m_export_png_timer;
   QTimer m_reload_timer;
   QVector<QPointer<dooble_web_engine_view> > m_last_javascript_popups;
+  QWidget *m_brightness;
   Ui_dooble_page m_ui;
   bool m_export_as_png;
   bool m_is_location_frame_user_hidden;
@@ -152,6 +157,7 @@ class dooble_page: public QWidget
   void slot_close_javascript_popup_exception_frame(void);
   void slot_create_dialog_request(dooble_web_engine_view *view);
   void slot_current_url_executable(void);
+  void slot_decreased_page_brightness(bool state);
   void slot_dooble_credentials_authenticated(bool state);
   void slot_dooble_credentials_created(void);
   void slot_downloads_finished(void);
@@ -192,10 +198,12 @@ class dooble_page: public QWidget
   void slot_open_link(void);
   void slot_prepare_backward_menu(void);
   void slot_prepare_forward_menu(void);
+  void slot_prepare_reload_menu(void);
   void slot_proxy_authentication_required(const QUrl &url,
 					  QAuthenticator *authenticator,
 					  const QString &proxy_host);
   void slot_reload(void);
+  void slot_reload_bypass_cache(void);
   void slot_reload_or_stop(void);
   void slot_reload_periodically(void);
   void slot_render_pixmap(void);
@@ -219,11 +227,13 @@ class dooble_page: public QWidget
  signals:
   void authenticate(void);
   void clear_downloads(void);
+  void clone(void);
   void close_tab(void);
   void close_window(void);
   void create_dialog(dooble_web_engine_view *view);
   void create_tab(dooble_web_engine_view *view);
   void create_window(dooble_web_engine_view *view);
+  void decreased_page_brightness(bool state);
   void dooble_credentials_authenticated(bool state);
   void export_as_png(void);
   void iconChanged(const QIcon &icon);
@@ -262,6 +272,7 @@ class dooble_page: public QWidget
   void show_settings(void);
   void show_settings_panel(dooble_settings::Panels panel);
   void show_site_cookies(void);
+  void status_bar_visible(bool state);
   void titleChanged(const QString &title);
   void translate_page(void);
   void vacuum_databases(void);
