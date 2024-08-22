@@ -194,7 +194,7 @@ dooble_settings::dooble_settings(void):dooble_main_window()
      Qt::ToolTipRole);
   m_ui.shortcuts->setModel(m_shortcuts_model);
 
-  auto language = QLocale::system().language();
+  auto const language = QLocale::system().language();
 
   if(language == QLocale::C || language == QLocale::English)
     {
@@ -205,44 +205,26 @@ dooble_settings::dooble_settings(void):dooble_main_window()
     }
   else
     {
-      // Should be in sync with dooble_application.cc.
-      QStringList paths;
-      auto variable(qgetenv("DOOBLE_TRANSLATIONS_PATH").trimmed());
+      QString path("");
+      auto const variable(qgetenv("DOOBLE_TRANSLATIONS_PATH").trimmed());
 
       if(!variable.isEmpty())
-	paths.append(QString::fromLocal8Bit(variable.constData()));
+	path = QString::fromLocal8Bit(variable.constData());
       else
 	{
-	  paths.append(QCoreApplication::applicationDirPath() + QDir::separator() + "Translations");
-#ifdef Q_OS_UNIX
-	  paths.append("/usr/local/share/dooble/translations");
-	  paths.append("/opt/local/share/dooble/translations");
-	  paths.append("/usr/share/dooble/translations");
-	  paths.append("/opt/share/dooble/translations");
-#elif defined(Q_OS_OS2)
-	  paths.append("/@unixroot/usr/local/share/dooble/translations");
-	  paths.append("/@unixroot/usr/share/dooble/translations");
-#endif
+	  path = QDir::currentPath();
+	  path.append(QDir::separator());
+	  path.append("Translations");
 	}
 
-      QString name = "dooble_" + QLocale::system().name().mid(0, 2) + ".qm";
-      QFileInfo file_info;
-      int i;
+      if(!path.endsWith(QDir::separator()))
+	path.append(QDir::separator());
 
-      for(i = 0; i < paths.size(); ++i)
-	{
-	  QString path = paths[i];
-	  if(!path.endsWith(QDir::separator()))
-	    path.append(QDir::separator());
+      path.append("dooble_" + QLocale::system().name() + ".qm");
 
-	  path.append(name);
+      QFileInfo const file_info(path);
 
-	  file_info = QFileInfo(path);
-	  if(file_info.exists() && file_info.isReadable())
-	    break;
-	}
-
-      if(i == paths.size())
+      if(!file_info.exists() || !file_info.isReadable())
 	{
 	  m_ui.language->model()->setData(m_ui.language->model()->index(1, 0),
 					  0,
@@ -254,6 +236,8 @@ dooble_settings::dooble_settings(void):dooble_main_window()
 	  if(!file_info.exists())
 	    m_ui.language_directory->setText
 	      (tr("<b>Warning!</b> The file %1 does not exist. "
+		  "Dooble searched DOOBLE_TRANSLATIONS_PATH and "
+		  "the relative Translations directories. "
 		  "The System option has been disabled. English "
 		  "will be assumed. Please read %2, line %3.").
 	       arg(file_info.absoluteFilePath()).
@@ -262,6 +246,8 @@ dooble_settings::dooble_settings(void):dooble_main_window()
 	  else
 	    m_ui.language_directory->setText
 	      (tr("<b>Warning!</b> The file %1 is not readable. "
+		  "Dooble searched DOOBLE_TRANSLATIONS_PATH and "
+		  "the relative Translations directories. "
 		  "The System option has been disabled. English "
 		  "will be assumed. Please read %2, line %3.").
 	       arg(file_info.absoluteFilePath()).
@@ -277,10 +263,12 @@ dooble_settings::dooble_settings(void):dooble_main_window()
 	    ("QLabel {background-color: #f2dede; border: 1px solid #ebccd1;"
 	     "color:#a94442;}");
 	  m_ui.language_directory->setText
-	    (tr("<b>Warning!</b> The file %1 is perhaps incomplete. "
+	    (tr("<b>Warning!</b> The file %1 is perhaps incomplete. It "
+		"contains only %2 bytes. "
 		"The System option has been disabled. English "
-		"will be assumed. Please read %2, line %3.").
+		"will be assumed. Please read %3, line %4.").
 	     arg(file_info.absoluteFilePath()).
+	     arg(file_info.size()).
 	     arg(__FILE__).
 	     arg(__LINE__));
 	}
@@ -301,7 +289,7 @@ dooble_settings::dooble_settings(void):dooble_main_window()
   s_http_user_agent = QWebEngineProfile::defaultProfile()->httpUserAgent() +
 #endif
     " Dooble/" DOOBLE_VERSION_STRING;
-#ifdef Q_OS_WIN
+#ifdef Q_OS_WINDOWS
 #else
   m_ui.theme->setEnabled(false);
   m_ui.theme->setToolTip(tr("Windows only."));
@@ -327,6 +315,7 @@ dooble_settings::dooble_settings(void):dooble_main_window()
   s_settings["favicons"] = true;
   s_settings["favorites_sort_index"] = 1; // Most Popular
   s_settings["features_permissions"] = true;
+  s_settings["full_screen"] = true;
   s_settings["hash_type"] = "SHA3-512";
   s_settings["hash_type_index"] = 1;
   s_settings["home_url"] = QUrl();
@@ -480,7 +469,7 @@ dooble_settings::dooble_settings(void):dooble_main_window()
 	(tr("A valid list of dictionaries has not been prepared."));
     }
   else
-    foreach(const auto &i, s_spell_checker_dictionaries)
+    foreach(auto const &i, s_spell_checker_dictionaries)
       {
 	auto item = new QListWidgetItem(i);
 
@@ -493,8 +482,19 @@ dooble_settings::dooble_settings(void):dooble_main_window()
 
   restore(true);
   prepare_icons();
+  prepare_shortcuts();
   show_qtwebengine_dictionaries_warning_label();
   slot_password_changed();
+}
+
+QString dooble_settings::shortcut(const QString &action) const
+{
+  auto item = m_shortcuts_model->findItems(action).value(0);
+
+  if(item && m_shortcuts_model->index(item->row(), 1).isValid())
+    return m_shortcuts_model->index(item->row(), 1).data().toString();
+  else
+    return "";
 }
 
 QString dooble_settings::cookie_policy_string(int index)
@@ -520,7 +520,7 @@ QString dooble_settings::zoom_frame_location_string(int index)
 
 QVariant dooble_settings::getenv(const QString &n)
 {
-  auto name(n.trimmed());
+  auto const name(n.trimmed());
 
   if(name.isEmpty())
     return QVariant();
@@ -538,15 +538,15 @@ QVariant dooble_settings::setting(const QString &k,
 				  const QVariant &default_value)
 {
   QReadLocker locker(&s_settings_mutex);
-  auto key(k.toLower().trimmed());
+  auto const key(k.toLower().trimmed());
 
   if(!s_settings.contains(key))
     {
-      auto home_path = s_settings.value("home_path").toString();
+      auto const home_path = s_settings.value("home_path").toString();
 
       locker.unlock();
 
-      auto database_name(dooble_database_utilities::database_name());
+      auto const database_name(dooble_database_utilities::database_name());
       auto value(default_value);
 
       {
@@ -662,7 +662,7 @@ bool dooble_settings::set_setting(const QString &key, const QVariant &value)
   s_settings[key.toLower().trimmed()] = value;
   locker.unlock();
 
-  auto database_name(dooble_database_utilities::database_name());
+  auto const database_name(dooble_database_utilities::database_name());
   auto ok = false;
 
   {
@@ -705,7 +705,7 @@ bool dooble_settings::site_has_javascript_block_popup_exception(const QUrl &url)
 
 int dooble_settings::main_menu_bar_visible_key(void)
 {
-  auto index = setting("main_menu_bar_visible_shortcut_index").toInt();
+  auto const index = setting("main_menu_bar_visible_shortcut_index").toInt();
 
   switch(index)
     {
@@ -727,9 +727,9 @@ int dooble_settings::site_feature_permission
   if(!s_site_features_permissions.contains(url))
     return -1;
 
-  auto values(s_site_features_permissions.values(url));
+  auto const values(s_site_features_permissions.values(url));
 
-  foreach(const auto &value, values)
+  foreach(auto const &value, values)
     if(feature == QWebEnginePage::Feature(value.first) && value.first != -1)
       return value.second ? 1 : 0;
 
@@ -742,7 +742,7 @@ void dooble_settings::add_shortcut(QObject *object)
 
   if(action && action->text().trimmed().length() > 0)
     {
-      auto text(action->text().trimmed());
+      auto const text(action->text().trimmed());
 
       if(m_shortcuts_model->findItems(text).isEmpty())
 	{
@@ -758,6 +758,28 @@ void dooble_settings::add_shortcut(QObject *object)
 	  m_ui.shortcuts->resizeColumnToContents(0);
 	  m_ui.shortcuts->sortByColumn(0, Qt::AscendingOrder);
 	}
+    }
+}
+
+void dooble_settings::add_shortcut
+(const QString &action, const QString &shortcut)
+{
+  if(action.trimmed().isEmpty() || shortcut.trimmed().isEmpty())
+    return;
+
+  if(m_shortcuts_model->findItems(action.trimmed()).isEmpty())
+    {
+      QList<QStandardItem *> items;
+      auto item = new QStandardItem(action.trimmed());
+
+      item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+      items << item;
+      item = new QStandardItem(shortcut);
+      item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+      items << item;
+      m_shortcuts_model->appendRow(items);
+      m_ui.shortcuts->resizeColumnToContents(0);
+      m_ui.shortcuts->sortByColumn(0, Qt::AscendingOrder);
     }
 }
 
@@ -865,12 +887,13 @@ void dooble_settings::new_javascript_block_popup_exception(const QUrl &url)
 void dooble_settings::prepare_application_fonts(void)
 {
   QFont font;
-  auto string(m_ui.display_application_font->text().remove('&').trimmed());
+  auto const string
+    (m_ui.display_application_font->text().remove('&').trimmed());
 
   if(string.isEmpty() || !font.fromString(string))
     font = dooble_application::font();
 
-  auto before = font.bold();
+  auto const before = font.bold();
 
   dooble::s_application->setFont(font);
 
@@ -913,7 +936,7 @@ void dooble_settings::prepare_fonts(void)
 	     << QWebEngineSettings::SerifFont
 	     << QWebEngineSettings::StandardFont;
 
-    foreach(const auto family, families)
+    foreach(auto const family, families)
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
       fonts << QWebEngineSettings::defaultSettings()->fontFamily(family);
 #else
@@ -1050,8 +1073,8 @@ void dooble_settings::prepare_fonts(void)
 
 void dooble_settings::prepare_icons(void)
 {
-  auto icon_set(setting("icon_set").toString());
-  auto use_material_icons(this->use_material_icons());
+  auto const icon_set(setting("icon_set").toString());
+  auto const use_material_icons(this->use_material_icons());
 
   m_ui.cache->setIcon
     (QIcon::fromTheme(use_material_icons + "drive-harddisk",
@@ -1073,12 +1096,12 @@ void dooble_settings::prepare_icons(void)
 		      QIcon(QString(":/%1/64/windows.png").arg(icon_set))));
 
   QSize size(0, 0);
-  static auto list(QList<QPushButton *> () << m_ui.cache
-		                           << m_ui.display
-		                           << m_ui.history
-		                           << m_ui.privacy
-		                           << m_ui.web
-		                           << m_ui.windows);
+  static auto const list(QList<QPushButton *> () << m_ui.cache
+			                         << m_ui.display
+		                                 << m_ui.history
+		                                 << m_ui.privacy
+		                                 << m_ui.web
+		                                 << m_ui.windows);
 
   foreach(auto i, list)
     {
@@ -1150,6 +1173,8 @@ void dooble_settings::prepare_proxy(bool save)
 void dooble_settings::prepare_shortcuts(void)
 {
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+  add_shortcut(tr("VIM Scroll Down"), tr("Ctrl+Shift+J"));
+  add_shortcut(tr("VIM Scroll Up"), tr("Ctrl+Shift+K"));
   QApplication::restoreOverrideCursor();
 }
 
@@ -1183,7 +1208,7 @@ void dooble_settings::prepare_web_engine_environment_variables(void)
 #endif
     }
 
-  auto database_name(dooble_database_utilities::database_name());
+  auto const database_name(dooble_database_utilities::database_name());
 
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
@@ -1220,8 +1245,8 @@ void dooble_settings::prepare_web_engine_environment_variables(void)
 	if(query.exec())
 	  while(query.next())
 	    {
-	      auto key(query.value(0).toString().trimmed());
-	      auto singular = s_web_engine_settings_environment.
+	      auto const key(query.value(0).toString().trimmed());
+	      auto const singular = s_web_engine_settings_environment.
 		value(key) == "singular";
 
 	      if(query.value(1).toBool() == false && singular)
@@ -1256,7 +1281,7 @@ void dooble_settings::prepare_web_engine_environment_variables(void)
 	      string.append(" ");
 	    }
 
-	auto old_environment
+	auto const old_environment
 	  (QString::fromLocal8Bit(qgetenv("QTWEBENGINE_CHROMIUM_FLAGS")).
 	   trimmed());
 
@@ -1286,7 +1311,7 @@ void dooble_settings::prepare_web_engine_settings(void)
   m_ui.web_engine_settings->setRowCount(0);
 
   QHash<QString, QVariant> values;
-  auto database_name(dooble_database_utilities::database_name());
+  auto const database_name(dooble_database_utilities::database_name());
 
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
@@ -1383,7 +1408,7 @@ void dooble_settings::purge_features_permissions(void)
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
   m_ui.features_permissions->setRowCount(0);
 
-  auto database_name(dooble_database_utilities::database_name());
+  auto const database_name(dooble_database_utilities::database_name());
 
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
@@ -1414,7 +1439,7 @@ void dooble_settings::purge_javascript_block_popup_exceptions(void)
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
   m_ui.javascript_block_popups_exceptions->setRowCount(0);
 
-  auto database_name(dooble_database_utilities::database_name());
+  auto const database_name(dooble_database_utilities::database_name());
 
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
@@ -1450,7 +1475,7 @@ void dooble_settings::remove_setting(const QString &key)
   s_settings.remove(key.toLower().trimmed());
   lock.unlock();
 
-  auto database_name(dooble_database_utilities::database_name());
+  auto const database_name(dooble_database_utilities::database_name());
 
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
@@ -1486,7 +1511,7 @@ void dooble_settings::restore(bool read_database)
 
   if(read_database)
     {
-      auto database_name(dooble_database_utilities::database_name());
+      auto const database_name(dooble_database_utilities::database_name());
 
       {
 	auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
@@ -1506,8 +1531,8 @@ void dooble_settings::restore(bool read_database)
 	    if(query.exec("SELECT key, value, OID FROM dooble_settings"))
 	      while(query.next())
 		{
-		  auto key(query.value(0).toString().toLower().trimmed());
-		  auto value(query.value(1).toString().trimmed());
+		  auto const key(query.value(0).toString().toLower().trimmed());
+		  auto const value(query.value(1).toString().trimmed());
 
 		  if(key.isEmpty() || value.isEmpty())
 		    {
@@ -1580,12 +1605,14 @@ void dooble_settings::restore(bool read_database)
   m_ui.favicons->setChecked(s_settings.value("favicons", true).toBool());
   m_ui.features_permissions_groupbox->setChecked
     (s_settings.value("features_permissions", true).toBool());
+  m_ui.full_screen->setChecked(s_settings.value("full_screen", true).toBool());
   m_ui.hash->setCurrentIndex
     (qBound(0,
 	    s_settings.value("hash_type_index", 1).toInt(), // SHA3-512
 	    m_ui.hash->count() - 1));
 
-  auto url(QUrl::fromEncoded(s_settings.value("home_url").toByteArray()));
+  auto const url
+    (QUrl::fromEncoded(s_settings.value("home_url").toByteArray()));
 
   if(!url.isEmpty() && url.isValid())
     m_ui.home_url->setText(url.toString());
@@ -1642,7 +1669,7 @@ void dooble_settings::restore(bool read_database)
   m_ui.proxy_password->setCursorPosition(0);
   m_ui.proxy_port->setValue(s_settings.value("proxy_port", 0).toInt());
 
-  auto index = s_settings.value("proxy_type_index", 0).toInt(); // None
+  auto const index = s_settings.value("proxy_type_index", 0).toInt(); // None
 
   if(index == 0)
     m_ui.proxy_none->setChecked(true);
@@ -1677,7 +1704,7 @@ void dooble_settings::restore(bool read_database)
   m_ui.splash_screen->setChecked
     (s_settings.value("splash_screen", true).toBool());
 
-  auto tab_position
+  auto const tab_position
     (s_settings.value("tab_position").toString().trimmed());
 
   if(tab_position == "east")
@@ -1691,7 +1718,7 @@ void dooble_settings::restore(bool read_database)
 
   m_ui.temporarily_disable_javascript->setChecked
     (s_settings.value("temporarily_disable_javascript", false).toBool());
-#ifdef Q_OS_WIN
+#ifdef Q_OS_WINDOWS
   m_ui.theme->setCurrentIndex
     (qBound(0,
 	    s_settings.value("theme_color_index", 2).toInt(),
@@ -1887,12 +1914,12 @@ void dooble_settings::restore(bool read_database)
     (QWebEngineSettings::XSSAuditingEnabled, m_ui.xss_auditing->isChecked());
 #endif
   {
-    static auto list(QList<QPushButton *> () << m_ui.cache
-		                             << m_ui.display
-		                             << m_ui.history
-		                             << m_ui.privacy
-		                             << m_ui.web
-		                             << m_ui.windows);
+    static auto const list(QList<QPushButton *> () << m_ui.cache
+		                                   << m_ui.display
+		                                   << m_ui.history
+		                                   << m_ui.privacy
+		                                   << m_ui.web
+		                                   << m_ui.windows);
 
     for(int i = 0; i < list.size(); i++)
       if(i != m_ui.pages->currentIndex())
@@ -1996,7 +2023,7 @@ void dooble_settings::save_javascript_block_popup_exception
 
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 
-  auto database_name(dooble_database_utilities::database_name());
+  auto const database_name(dooble_database_utilities::database_name());
 
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
@@ -2117,9 +2144,9 @@ void dooble_settings::set_site_feature_permission
     }
   else
     {
-      auto values(s_site_features_permissions.values(url));
+      auto const values(s_site_features_permissions.values(url));
 
-      foreach(const auto &value, values)
+      foreach(auto const &value, values)
 	if(feature == QWebEnginePage::Feature(value.first) &&
 	   value.first != -1)
 	  {
@@ -2139,7 +2166,7 @@ void dooble_settings::set_site_feature_permission
 
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 
-  auto database_name(dooble_database_utilities::database_name());
+  auto const database_name(dooble_database_utilities::database_name());
 
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
@@ -2279,19 +2306,22 @@ void dooble_settings::show_panel(dooble_settings::Panels panel)
 
 void dooble_settings::show_qtwebengine_dictionaries_warning_label(void)
 {
-  m_ui.qtwebengine_dictionaries_warning_label->setText
-    (tr("<b>Warning!</b> "
-	"The directory qtwebengine_dictionaries cannot be accessed. "
-	"Please read %1, line %2.").arg(__FILE__).arg(__LINE__));
   m_ui.qtwebengine_dictionaries_warning_label->setVisible(false);
 
-  auto bytes(qgetenv("QTWEBENGINE_DICTIONARIES_PATH"));
+  auto const bytes(qgetenv("QTWEBENGINE_DICTIONARIES_PATH"));
 
   if(bytes.trimmed().isEmpty())
     {
-      bytes = "qtwebengine_dictionaries";
+      auto const directory
+	(QDir::currentPath() + QDir::separator() + "qtwebengine_dictionaries");
 
-      if(!QFileInfo(bytes).isReadable())
+      m_ui.qtwebengine_dictionaries_warning_label->setText
+	(tr("<b>Warning!</b> "
+	    "The directory qtwebengine_dictionaries cannot be accessed. "
+	    "Dooble searched %1. Please read %2, line %3.").
+	 arg(directory).arg(__FILE__).arg(__LINE__));
+
+      if(!QFileInfo(directory).isReadable())
 	{
 	  m_ui.qtwebengine_dictionaries_warning_label->setVisible(true);
 	  return;
@@ -2299,6 +2329,11 @@ void dooble_settings::show_qtwebengine_dictionaries_warning_label(void)
     }
   else if(!QFileInfo(bytes).isReadable())
     {
+      m_ui.qtwebengine_dictionaries_warning_label->setText
+	(tr("<b>Warning!</b> "
+	    "The directory qtwebengine_dictionaries cannot be accessed. "
+	    "Dooble searched %1. Please read %2, line %3.").
+	 arg(bytes.constData()).arg(__FILE__).arg(__LINE__));
       m_ui.qtwebengine_dictionaries_warning_label->setVisible(true);
       return;
     }
@@ -2620,12 +2655,13 @@ void dooble_settings::slot_apply(void)
   set_setting("favicons", m_ui.favicons->isChecked());
   set_setting
     ("features_permissions", m_ui.features_permissions_groupbox->isChecked());
+  set_setting("full_screen", m_ui.full_screen->isChecked());
 
   if(m_ui.home_url->text().trimmed().isEmpty())
     set_setting("home_url", QUrl());
   else
     {
-      auto url(QUrl::fromUserInput(m_ui.home_url->text().trimmed()));
+      auto const url(QUrl::fromUserInput(m_ui.home_url->text().trimmed()));
 
       m_ui.home_url->setText(url.toString());
       set_setting("home_url", url.toEncoded());
@@ -2752,7 +2788,7 @@ void dooble_settings::slot_javascript_block_popups_exceptions_item_changed
   if(item->column() != 0)
     return;
 
-  auto state = item->checkState() == Qt::Checked;
+  auto const state = item->checkState() == Qt::Checked;
 
   item = m_ui.javascript_block_popups_exceptions->item(item->row(), 1);
 
@@ -2766,8 +2802,8 @@ void dooble_settings::slot_new_javascript_block_popup_exception(const QUrl &url)
 {
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 
-  auto list(m_ui.javascript_block_popups_exceptions->
-	    findItems(url.toString(), Qt::MatchExactly));
+  auto const list(m_ui.javascript_block_popups_exceptions->
+		  findItems(url.toString(), Qt::MatchExactly));
 
   if(!list.isEmpty())
     if(list.at(0))
@@ -2792,12 +2828,12 @@ void dooble_settings::slot_page_button_clicked(void)
   if(!tool_button)
     return;
 
-  static auto list(QList<QPushButton *> () << m_ui.cache
-		                           << m_ui.display
-		                           << m_ui.history
-		                           << m_ui.privacy
-		                           << m_ui.web
-		                           << m_ui.windows);
+  static auto const list(QList<QPushButton *> () << m_ui.cache
+		                                 << m_ui.display
+		                                 << m_ui.history
+		                                 << m_ui.privacy
+		                                 << m_ui.web
+		                                 << m_ui.windows);
 
   for(int i = 0; i < list.size(); i++)
     if(list.at(i) != tool_button)
@@ -2811,8 +2847,8 @@ void dooble_settings::slot_page_button_clicked(void)
 
 void dooble_settings::slot_password_changed(void)
 {
-  auto password_1(m_ui.password_1->text());
-  auto password_2(m_ui.password_2->text());
+  auto const password_1(m_ui.password_1->text());
+  auto const password_2(m_ui.password_2->text());
 
   if(password_1.isEmpty() || password_1 != password_2)
     {
@@ -2850,7 +2886,7 @@ void dooble_settings::slot_pbkdf2_future_finished(void)
   if(!was_canceled)
     {
       QString error("");
-      auto list(m_pbkdf2_future.result());
+      auto const list(m_pbkdf2_future.result());
       auto ok = true;
 
       if(list.size() == 6)
@@ -3011,7 +3047,7 @@ void dooble_settings::slot_populate(void)
   s_javascript_block_popup_exceptions.clear();
   s_site_features_permissions.clear();
 
-  auto database_name(dooble_database_utilities::database_name());
+  auto const database_name(dooble_database_utilities::database_name());
   int count_1 = 0;
 
   {
@@ -3353,7 +3389,7 @@ void dooble_settings::slot_remove_selected_features_permissions(void)
 
   if(dooble::s_cryptography && dooble::s_cryptography->authenticated())
     {
-      auto database_name(dooble_database_utilities::database_name());
+      auto const database_name(dooble_database_utilities::database_name());
 
       {
 	auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
@@ -3468,7 +3504,7 @@ slot_remove_selected_javascript_block_popup_exceptions(void)
 
   if(dooble::s_cryptography && dooble::s_cryptography->authenticated())
     {
-      auto database_name(dooble_database_utilities::database_name());
+      auto const database_name(dooble_database_utilities::database_name());
 
       {
 	auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
@@ -3559,7 +3595,7 @@ void dooble_settings::slot_reset(void)
        << "dooble_settings.db"
        << "dooble_style_sheets.db";
 
-  foreach(const auto &i, list)
+  foreach(auto const &i, list)
     QFile::remove(setting("home_path").toString() +
 		  QDir::separator() +
 		  i);
@@ -3667,8 +3703,8 @@ void dooble_settings::slot_save_credentials(void)
   if(m_pbkdf2_dialog || m_pbkdf2_future.isRunning())
     return;
 
-  auto password_1(m_ui.password_1->text());
-  auto password_2(m_ui.password_2->text());
+  auto const password_1(m_ui.password_1->text());
+  auto const password_2(m_ui.password_2->text());
 
   if(password_1.isEmpty())
     {
@@ -3711,7 +3747,7 @@ void dooble_settings::slot_save_credentials(void)
       QApplication::processEvents();
     }
 
-  auto salt(dooble_random::random_bytes(64));
+  auto const salt(dooble_random::random_bytes(64));
 
   if(salt.isEmpty())
     {
@@ -3799,11 +3835,11 @@ void dooble_settings::slot_web_engine_settings_item_changed
 
   if(Qt::ItemIsUserCheckable & item->flags())
     {
-      auto string(item->data(Qt::UserRole).toString().trimmed());
+      auto const string(item->data(Qt::UserRole).toString().trimmed());
 
       if(!string.isEmpty())
 	{
-	  auto database_name(dooble_database_utilities::database_name());
+	  auto const database_name(dooble_database_utilities::database_name());
 
 	  {
 	    auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
