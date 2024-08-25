@@ -281,7 +281,6 @@ int main(int argc, char *argv[])
 #endif
 #endif
   QString dooble_settings_path("");
-  dooble::s_application = new dooble_application(argc, argv);
 #if defined(Q_OS_WINDOWS)
   auto const bytes(qgetenv("DOOBLE_HOME").trimmed());
 
