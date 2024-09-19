@@ -133,7 +133,17 @@ int main(int argc, char *argv[])
 
 	    if(argc > i && argv[i])
 	      {
-		QUrl url(QUrl::fromUserInput(argv[i]));
+		auto url(QUrl::fromUserInput(argv[i]));
+
+		if(url.isValid() == false)
+		  {
+		    QFileInfo const file_info(argv[i]);
+
+		    if(file_info.isReadable())
+		      url = QUrl::fromUserInput(file_info.absoluteFilePath());
+		  }
+		else if(url.scheme() == "http")
+		  url.setScheme("https");
 
 		if(dooble_ui_utilities::allowed_url_scheme(url))
 		  urls << url;
@@ -149,7 +159,17 @@ int main(int argc, char *argv[])
 	  test_threefish_performance = true;
 	else
 	  {
-	    QUrl url(QUrl::fromUserInput(argv[i]));
+	    auto url(QUrl::fromUserInput(argv[i]));
+
+	    if(url.isValid() == false)
+	      {
+		QFileInfo const file_info(argv[i]);
+
+		if(file_info.isReadable())
+		  url = QUrl::fromUserInput(file_info.absoluteFilePath());
+	      }
+	    else if(url.scheme() == "http")
+	      url.setScheme("https");
 
 	    if(dooble_ui_utilities::allowed_url_scheme(url))
 	      urls << url;

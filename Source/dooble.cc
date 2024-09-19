@@ -103,8 +103,8 @@ QString dooble::ABOUT_BLANK = "about:blank";
 QString dooble::s_default_http_user_agent = "";
 bool dooble::s_containers_populated = false;
 
-static QSize s_vga_size = QSize(640, 480);
-static bool s_warned_of_missing_sqlite_driver = false;
+static auto s_vga_size = QSize(640, 480);
+static auto s_warned_of_missing_sqlite_driver = false;
 static int EXPECTED_POPULATED_CONTAINERS = 9;
 static int s_populated = 0;
 
@@ -112,6 +112,7 @@ dooble::dooble(QWidget *widget):QMainWindow()
 {
   initialize_static_members();
   m_anonymous_tab_headers = false;
+  m_elapsed_timer.start();
   m_floating_digital_clock_dialog = nullptr;
   m_is_javascript_dialog = false;
   m_is_private = false;
@@ -157,6 +158,7 @@ dooble::dooble(const QList<QUrl> &urls, bool is_private, bool attach):
 {
   initialize_static_members();
   m_anonymous_tab_headers = false;
+  m_elapsed_timer.start();
   m_floating_digital_clock_dialog = nullptr;
   m_is_javascript_dialog = false;
   m_is_private = is_private;
@@ -273,6 +275,7 @@ dooble::dooble(dooble_page *page):QMainWindow()
 {
   initialize_static_members();
   m_anonymous_tab_headers = false;
+  m_elapsed_timer.start();
   m_floating_digital_clock_dialog = nullptr;
   m_is_javascript_dialog = false;
   m_is_private = page ? page->is_private() : false;
@@ -307,6 +310,7 @@ dooble::dooble(dooble_web_engine_view *view):QMainWindow()
 {
   initialize_static_members();
   m_anonymous_tab_headers = false;
+  m_elapsed_timer.start();
   m_floating_digital_clock_dialog = nullptr;
   m_is_javascript_dialog = false;
   m_is_private = view ? view->is_private() : false;
@@ -631,9 +635,8 @@ gpgme_error_t dooble::peekaboo_passphrase(void *hook,
   Q_UNUSED(uid_hint);
 
   QString passphrase("");
-  bool ok = true;
+  auto ok = true;
 
-  QApplication::restoreOverrideCursor();
   passphrase = QInputDialog::getText
     (s_dooble,
      tr("Dooble: Peekaboo Passphrase"),
@@ -956,7 +959,7 @@ void dooble::delayed_load(const QUrl &url, dooble_page *page)
 
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 
-  QPair<QPointer<dooble_page>, QUrl> pair(page, url);
+  QPair<QPointer<dooble_page>, QUrl> const pair(page, url);
 
   if(!m_delayed_pages.contains(pair))
     m_delayed_pages.append(pair);
@@ -2278,7 +2281,7 @@ void dooble::prepare_standard_menus(void)
 		  SLOT(slot_show_certificate_exceptions(void)));
   menu->addSeparator();
 
-  QMenu *sub_menu = new QMenu(tr("Charts"));
+  auto sub_menu = new QMenu(tr("Charts"));
 
   menu->addMenu(sub_menu);
   action = sub_menu->addAction(tr("XY Series"),
@@ -2640,7 +2643,7 @@ void dooble::print(QWidget *parent, dooble_charts *chart)
       auto const yscale = printer.pageRect().height() /
 	static_cast<double> (view->height());
 #endif
-      double scale = qMin(xscale, yscale);
+      auto const scale = qMin(xscale, yscale);
 
       painter.scale(scale, scale);
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 15, 0))
@@ -3371,8 +3374,7 @@ void dooble::slot_application_locked(bool state, dooble *d)
 
   for(int i = m_ui.tab->count() - 1; i >= 0; i--)
     {
-      dooble_charts *chart = qobject_cast<dooble_charts *>
-	(m_ui.tab->widget(i));
+      auto chart = qobject_cast<dooble_charts *> (m_ui.tab->widget(i));
 
       if(chart)
 	{
@@ -3949,6 +3951,12 @@ void dooble::slot_floating_digital_dialog_timeout(void)
   font = m_floating_digital_clock_ui.date->font();
   font.setPointSize(15);
   m_floating_digital_clock_ui.date->setFont(font);
+  m_floating_digital_clock_ui.uptime->setText
+    (tr("Uptime: %1 Hours").
+     arg(static_cast<double> (m_elapsed_timer.elapsed()) / 3600000.0,
+	 0,
+	 'f',
+	 2));
 }
 
 void dooble::slot_history_action_hovered(void)
@@ -4336,8 +4344,7 @@ void dooble::slot_peekaboo_text(const QString &t)
 
 		  dialog->set_text(output);
 		  dialog->set_text_color
-		    (valid_signature ?
-		     QColor(1, 50, 32) : QColor(255, 75, 0));
+		    (valid_signature ? QColor(1, 50, 32) : QColor(255, 75, 0));
 		  dialog->show();
 		}
 	    }

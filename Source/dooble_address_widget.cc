@@ -249,7 +249,7 @@ void dooble_address_widget::dropEvent(QDropEvent *event)
 {
   if(event && event->mimeData())
     {
-      QUrl url(event->mimeData()->text());
+      QUrl const url(event->mimeData()->text());
 
       if(!url.isEmpty() && url.isValid())
 	{
@@ -426,10 +426,10 @@ void dooble_address_widget::set_text_format
 
   foreach(auto const format, formats)
     {
+      QVariant const value(format.format);
       auto const attribute_type = QInputMethodEvent::TextFormat;
       auto const length = format.length;
       auto const start = format.start;
-      const QVariant &value(format.format);
 
       attributes << QInputMethodEvent::Attribute(attribute_type,
 						 start,
