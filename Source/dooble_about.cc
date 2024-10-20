@@ -38,8 +38,8 @@
 dooble_about::dooble_about(void):QMainWindow()
 {
   m_swifty = new swifty
-    (DOOBLE_VERSION_STRING,
-     "#define DOOBLE_VERSION_STRING",
+    (DOOBLE_VERSION_STRING_LTS,
+     "#define DOOBLE_VERSION_STRING_LTS",
      QUrl::fromUserInput("https://raw.githubusercontent.com/"
 			 "textbrowser/dooble/master/Source/dooble_version.h"),
      this);
@@ -103,8 +103,9 @@ dooble_about::dooble_about(void):QMainWindow()
   m_ui.user_agent->setText(dooble::s_default_http_user_agent);
   m_ui.version->setText
     (tr("Dooble version %1. Made with love by textbrowser. "
-        "The official version is <b>%1</b>.").
-     arg(DOOBLE_VERSION_STRING));
+        "The <b>official version</b> is <b>%2</b>.").
+     arg(DOOBLE_VERSION_STRING).
+     arg(DOOBLE_VERSION_STRING_LTS));
   compute_self_digest();
 }
 
@@ -180,7 +181,7 @@ void dooble_about::slot_swifty(void)
 {
   m_ui.version->setText
     (tr("Dooble version %1. Made with love by textbrowser. "
-        "The official version is <b>%2</b>.").
+        "The <b>official version</b> is <b>%2</b>.").
      arg(DOOBLE_VERSION_STRING).
      arg(m_swifty->newest_version()));
 }

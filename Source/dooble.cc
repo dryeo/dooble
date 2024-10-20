@@ -73,6 +73,7 @@
 #include "dooble_web_engine_view.h"
 #include "ui_dooble_authenticate.h"
 
+QElapsedTimer dooble::s_elapsed_timer;
 QPointer<dooble> dooble::s_dooble = nullptr;
 QPointer<dooble> dooble::s_favorites_popup_opened_from_dooble_window = nullptr;
 QPointer<dooble> dooble::s_search_engines_popup_opened_from_dooble_window =
@@ -112,7 +113,6 @@ dooble::dooble(QWidget *widget):QMainWindow()
 {
   initialize_static_members();
   m_anonymous_tab_headers = false;
-  m_elapsed_timer.start();
   m_floating_digital_clock_dialog = nullptr;
   m_is_javascript_dialog = false;
   m_is_private = false;
@@ -153,12 +153,14 @@ dooble::dooble(QWidget *widget):QMainWindow()
   prepare_style_sheets();
 }
 
-dooble::dooble(const QList<QUrl> &urls, bool is_private, bool attach):
-  QMainWindow()
+dooble::dooble(const QList<QUrl> &urls,
+	       bool attach,
+	       bool disable_javascript,
+	       bool is_private,
+	       int reload_periodically):QMainWindow()
 {
   initialize_static_members();
   m_anonymous_tab_headers = false;
-  m_elapsed_timer.start();
   m_floating_digital_clock_dialog = nullptr;
   m_is_javascript_dialog = false;
   m_is_private = is_private;
@@ -232,6 +234,12 @@ dooble::dooble(const QList<QUrl> &urls, bool is_private, bool attach):
 	{
 	  if(urls.isEmpty())
 	    {
+	      socket.write("--disable-javascript ");
+	      socket.write(QByteArray::number(disable_javascript));
+	      socket.write("\n");
+	      socket.write("--reload-periodically ");
+	      socket.write(QByteArray::number(reload_periodically));
+	      socket.write("\n");
 	      socket.write(QUrl(ABOUT_BLANK).toEncoded().toBase64());
 	      socket.write("\n");
 	      socket.flush();
@@ -239,6 +247,12 @@ dooble::dooble(const QList<QUrl> &urls, bool is_private, bool attach):
 	  else
 	    foreach(auto const &url, urls)
 	      {
+		socket.write("--disable-javascript ");
+		socket.write(QByteArray::number(disable_javascript));
+		socket.write("\n");
+		socket.write("--reload-periodically ");
+		socket.write(QByteArray::number(reload_periodically));
+		socket.write("\n");
 		socket.write(url.toEncoded().toBase64());
 		socket.write("\n");
 		socket.flush();
@@ -247,13 +261,39 @@ dooble::dooble(const QList<QUrl> &urls, bool is_private, bool attach):
 	  m_attached = true;
 	  return;
 	}
+      else
+	qDebug() << tr("Cannot attach to a local Dooble instance.");
     }
 
   if(urls.isEmpty())
-    new_page(QUrl(), is_private);
+    {
+      auto page = new_page(QUrl(), is_private);
+
+      if(page)
+	{
+	  if(page->
+	     is_web_setting_enabled(QWebEngineSettings::JavascriptEnabled))
+	    page->enable_web_setting
+	      (QWebEngineSettings::JavascriptEnabled, !disable_javascript);
+
+	  page->reload_periodically(reload_periodically);
+	}
+    }
   else
     foreach(auto const &url, urls)
-      new_page(url, is_private);
+      {
+	auto page = new_page(url, is_private);
+
+	if(page)
+	  {
+	    if(page->
+	       is_web_setting_enabled(QWebEngineSettings::JavascriptEnabled))
+	      page->enable_web_setting
+		(QWebEngineSettings::JavascriptEnabled, !disable_javascript);
+
+	    page->reload_periodically(reload_periodically);
+	  }
+      }
 
   if(!s_containers_populated)
     if(s_cryptography->as_plaintext())
@@ -275,7 +315,6 @@ dooble::dooble(dooble_page *page):QMainWindow()
 {
   initialize_static_members();
   m_anonymous_tab_headers = false;
-  m_elapsed_timer.start();
   m_floating_digital_clock_dialog = nullptr;
   m_is_javascript_dialog = false;
   m_is_private = page ? page->is_private() : false;
@@ -310,7 +349,6 @@ dooble::dooble(dooble_web_engine_view *view):QMainWindow()
 {
   initialize_static_members();
   m_anonymous_tab_headers = false;
-  m_elapsed_timer.start();
   m_floating_digital_clock_dialog = nullptr;
   m_is_javascript_dialog = false;
   m_is_private = view ? view->is_private() : false;
@@ -1034,6 +1072,9 @@ void dooble::initialize_static_members(void)
 	      SLOT(slot_downloads_started(void)));
     }
 
+  if(!s_elapsed_timer.isValid())
+    s_elapsed_timer.start();
+
   if(!s_favorites_window)
     {
       s_favorites_window = new dooble_favorites_popup(nullptr);
@@ -1293,7 +1334,7 @@ void dooble::open_tab_as_new_window(bool is_private, int index)
       remove_page_connections(page);
 
       if(is_private)
-	d = new dooble(QList<QUrl> () << page->url(), true, false);
+	d = new dooble(QList<QUrl> () << page->url(), false, false, true, -1);
       else
 	d = new dooble(page);
 
@@ -2000,7 +2041,7 @@ void dooble::prepare_standard_menus(void)
 {
   auto is_chart = qobject_cast<dooble_charts *> (m_ui.tab->currentWidget());
 
-  foreach(auto const action, m_standard_menu_actions)
+  foreach(auto action, m_standard_menu_actions)
     if(action)
       action->setEnabled(is_chart);
 
@@ -2971,6 +3012,23 @@ void dooble::showFullScreen(void)
 					   toByteArray()));
 
   QMainWindow::showFullScreen();
+
+  if(!s_warned_of_missing_sqlite_driver)
+    {
+      s_warned_of_missing_sqlite_driver = true;
+      QTimer::singleShot
+	(2500, this, SLOT(slot_warn_of_missing_sqlite_driver(void)));
+    }
+}
+
+void dooble::showNormal(void)
+{
+  if(dooble_settings::setting("save_geometry").toBool())
+    restoreGeometry(QByteArray::fromBase64(dooble_settings::
+					   setting("dooble_geometry").
+					   toByteArray()));
+
+  QMainWindow::showNormal();
 
   if(!s_warned_of_missing_sqlite_driver)
     {
@@ -3953,7 +4011,7 @@ void dooble::slot_floating_digital_dialog_timeout(void)
   m_floating_digital_clock_ui.date->setFont(font);
   m_floating_digital_clock_ui.uptime->setText
     (tr("Uptime: %1 Hours").
-     arg(static_cast<double> (m_elapsed_timer.elapsed()) / 3600000.0,
+     arg(static_cast<double> (s_elapsed_timer.elapsed()) / 3600000.0,
 	 0,
 	 'f',
 	 2));
@@ -4054,7 +4112,7 @@ void dooble::slot_new_local_connection(void)
 
 void dooble::slot_new_private_window(void)
 {
-  (new dooble(QList<QUrl> () << QUrl(), true, false))->show();
+  (new dooble(QList<QUrl> () << QUrl(), false, false, true, -1))->show();
 }
 
 void dooble::slot_new_tab(const QUrl &url)
@@ -4069,7 +4127,7 @@ void dooble::slot_new_tab(void)
 
 void dooble::slot_new_window(void)
 {
-  (new dooble(QList<QUrl> () << QUrl(), false, false))->show();
+  (new dooble(QList<QUrl> () << QUrl(), false, false, false, -1))->show();
 }
 
 void dooble::slot_open_chart(void)
@@ -4123,7 +4181,7 @@ void dooble::slot_open_link(const QUrl &url)
 
 void dooble::slot_open_link_in_new_private_window(const QUrl &url)
 {
-  (new dooble(QList<QUrl> () << url, true, false))->show();
+  (new dooble(QList<QUrl> () << url, false, false, true, -1))->show();
 }
 
 void dooble::slot_open_link_in_new_tab(const QUrl &url)
@@ -4133,7 +4191,7 @@ void dooble::slot_open_link_in_new_tab(const QUrl &url)
 
 void dooble::slot_open_link_in_new_window(const QUrl &url)
 {
-  (new dooble(QList<QUrl> () << url, false, false))->show();
+  (new dooble(QList<QUrl> () << url, false, false, false, -1))->show();
 }
 
 void dooble::slot_open_local_file(void)
@@ -4528,14 +4586,41 @@ void dooble::slot_read_local_socket(void)
   while(socket->bytesAvailable() > 0)
     data.append(socket->readAll());
 
-  auto const list(data.split('\n'));
+  auto const list(data.trimmed().split('\n'));
+  auto disable_javascript = false;
+  int reload_periodically = -1;
 
   foreach(auto const &i, list)
     {
+      if(i.startsWith("--disable-javascript "))
+	//             012345678901234567890
+	{
+	  disable_javascript = QVariant(i.mid(21)).toBool();
+	  continue;
+	}
+      else if(i.startsWith("--reload-periodically "))
+	//                  0123456789012345678901
+	{
+	  reload_periodically = i.mid(22).toInt();
+	  continue;
+	}
+
       auto const url(QUrl::fromEncoded(QByteArray::fromBase64(i)));
 
-      if(url.isValid())
-	new_page(url, m_is_private);
+      if(url.isEmpty() == false && url.isValid())
+	{
+	  auto page = new_page(url, m_is_private);
+
+	  if(page)
+	    {
+	      if(page->
+		 is_web_setting_enabled(QWebEngineSettings::JavascriptEnabled))
+		page->enable_web_setting
+		  (QWebEngineSettings::JavascriptEnabled, !disable_javascript);
+
+	      page->reload_periodically(reload_periodically);
+	    }
+	}
     }
 }
 

@@ -14,7 +14,7 @@
 	box-sizing: content-box;
 	color: #323b2e;
 	font-family: Arial, Helvetica, Sans-Serif;
-	font-size: 14px;
+	font-size: 15px;
 	overflow: hidden;
 	padding: 10px;
 	text-align: left;
@@ -29,12 +29,34 @@
     <title>Dooble Release Notes</title>
     <div class="css">
       <p>
-	<h3><b>Dooble 2024.09.20</b></h3>
-	Welcome to the <b>2024.09.20</b> release of Dooble. Corrections and new features are detailed below.
+	<h3><b>Dooble 2024.00.00</b></h3>
+	Welcome to the <b>2024.00.00</b> release of Dooble. Corrections and new features are detailed below.
 	<ul>
+	  <li>Inject JavaScript scripts into loaded pages. GitHub ticket <a href="https://github.com/textbrowser/dooble/issues/239">#239</a>.</li>
+	  <li>Issue QLineEdit::resizeEvent() before other instructions.</li>
+	  <li>JavaScript Console content will be saved per URL host instead of URL. New pages only.</li>
+	  <li>LTS Dooble version in About.</li>
+	  <li>New allow-insecure-localhost and allow-running-insecure-content in Settings -> Web -> WebEngine.</li>
+	  <li>Non-modal JavaScript Console.</li>
+	  <li>Qt 6.8 LTS. Web permissions are wonky.</li>
+	  <li>Show all hosts and scripts in JavaScript Console. Scripts may be deleted and edited.</li>
+	</ul>
+      </p>
+      <p>
+	<h3><b>Dooble 2024.09.29</b></h3>
+	Welcome to the <b>2024.09.29</b> release of Dooble. Corrections and new features are detailed below.
+	<ul>
+	  <li>Allow -style terminal argument.</li>
 	  <li>Attempt to discover terminal file URLs.</li>
+	  <li>Attempt to load translation files according to QTranslator::load(QLocale(), "dooble", "_", path, ".qm") and QTranslator::load(QLocale(), "qtbase", "_", path, ".qm").</li>
 	  <li>Automatics and constants. Please report errors.</li>
-	  <li>Everyone loves elapsed time!</li>
+	  <li>Everyone loves elapsed time! See Floating Digital Clock.</li>
+	  <li>New --disable-javascript option.</li>
+	  <li>New --normal-screen option.</li>
+	  <li>New --reload-periodically TIME option.</li>
+	  <li>Removed incorrect text from History label: Private Dooble History windows do not exist.</li>
+	  <li>Save the floating history window's geometry only if the window is visible. Otherwise, the recorded geometry will be invalid in a future session.</li>
+	  <li>Set QMAKE_MACOSX_DEPLOYMENT_TARGET to 12.0.</li>
 	  <li>Set terminal URL schemes to HTTPS.</li>
 	  <li>Source release!</li>
 	  <li>Windows 11 release!</li>

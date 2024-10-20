@@ -31,6 +31,10 @@
 #include <QPointer>
 #include <QTimer>
 #include <QWebEnginePage>
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
+#else
+#include <QWebEnginePermission>
+#endif
 #include <QWebEngineSettings>
 
 #include "dooble_settings.h"
@@ -168,10 +172,20 @@ class dooble_page: public QWidget
   void slot_favorite_changed(const QUrl &url, bool state);
   void slot_feature_permission_allow(void);
   void slot_feature_permission_deny(void);
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
   void slot_feature_permission_request_canceled
     (const QUrl &security_origin, QWebEnginePage::Feature feature);
-  void slot_feature_permission_requested(const QUrl &security_origin,
-					 QWebEnginePage::Feature feature);
+  void slot_feature_permission_requested
+    (const QUrl &security_origin, QWebEnginePage::Feature feature);
+#else
+  void slot_feature_permission_request_canceled
+    (const QUrl &security_origin,
+     QWebEnginePermission::PermissionType feature);
+  void slot_feature_permission_requested
+    (const QUrl &security_origin,
+     QWebEnginePermission::PermissionType feature,
+     QWebEnginePermission::State &state);
+#endif
   void slot_find_next(void);
   void slot_find_previous(void);
   void slot_find_text_edited(const QString &text);
@@ -196,6 +210,10 @@ class dooble_page: public QWidget
   void slot_only_now_allow_javascript_popup(void);
   void slot_open_link(const QUrl &url);
   void slot_open_link(void);
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
+#else
+  void slot_permission_requested(QWebEnginePermission permission);
+#endif
   void slot_prepare_backward_menu(void);
   void slot_prepare_forward_menu(void);
   void slot_prepare_reload_menu(void);

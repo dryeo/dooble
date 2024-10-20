@@ -66,6 +66,7 @@ dooble_web_engine_view::dooble_web_engine_view
 	  SIGNAL(certificate_exception_accepted(const QUrl &)),
 	  this,
 	  SLOT(slot_certificate_exception_accepted(const QUrl &)));
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
   connect(m_page,
 	  SIGNAL(featurePermissionRequestCanceled(const QUrl &,
 						  QWebEnginePage::Feature)),
@@ -78,6 +79,12 @@ dooble_web_engine_view::dooble_web_engine_view
 	  this,
 	  SIGNAL(featurePermissionRequested(const QUrl &,
 					    QWebEnginePage::Feature)));
+#else
+  connect(m_page,
+	  SIGNAL(permissionRequested(QWebEnginePermission)),
+	  this,
+	  SIGNAL(permissionRequested(QWebEnginePermission)));
+#endif
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
   connect(m_page,
 	  SIGNAL(printRequested(void)),
@@ -585,6 +592,7 @@ void dooble_web_engine_view::slot_accept_or_block_domain(void)
     }
 }
 
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
 void dooble_web_engine_view::set_feature_permission
 (const QUrl &security_origin,
  QWebEnginePage::Feature feature,
@@ -596,6 +604,24 @@ void dooble_web_engine_view::set_feature_permission
      policy == QWebEnginePage::PermissionGrantedByUser);
   m_page->setFeaturePermission(security_origin, feature, policy);
 }
+#else
+void dooble_web_engine_view::set_feature_permission
+(const QUrl &security_origin,
+ QWebEnginePermission::PermissionType feature,
+ QWebEnginePermission::State policy)
+{
+  dooble::s_settings->set_site_feature_permission
+    (security_origin,
+     feature,
+     policy == QWebEnginePermission::State::Granted);
+
+  foreach(auto permission,
+	  m_page->profile()->listPermissionsForOrigin(security_origin))
+    if(feature == permission.permissionType())
+      policy == QWebEnginePermission::State::Granted ?
+	permission.grant() : permission.deny();
+}
+#endif
 
 void dooble_web_engine_view::slot_certificate_exception_accepted
 (const QUrl &url)

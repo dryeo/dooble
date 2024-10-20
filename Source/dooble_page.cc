@@ -74,6 +74,7 @@ dooble_page::dooble_page(QWebEngineProfile *web_engine_profile,
   m_is_location_frame_user_hidden = false;
   m_is_private = QWebEngineProfile::defaultProfile() != web_engine_profile &&
     web_engine_profile;
+  m_javascript_console = new dooble_javascript(this);
   m_menu = new QMenu(this);
   m_popup_menu = new dooble_popup_menu(zoom_factor, this);
   m_popup_menu->resize(m_popup_menu->minimumSize());
@@ -112,6 +113,7 @@ dooble_page::dooble_page(QWebEngineProfile *web_engine_profile,
   else
     m_view = new dooble_web_engine_view(web_engine_profile, this);
 
+  m_javascript_console->set_page(m_view->page());
   m_ui.address->set_view(m_view);
   m_ui.frame->layout()->addWidget(m_view);
 
@@ -334,6 +336,7 @@ dooble_page::dooble_page(QWebEngineProfile *web_engine_profile,
 	  SIGNAL(create_window(dooble_web_engine_view *)),
 	  this,
 	  SIGNAL(create_window(dooble_web_engine_view *)));
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
   connect
     (m_view,
      SIGNAL(featurePermissionRequestCanceled(const QUrl &,
@@ -347,6 +350,8 @@ dooble_page::dooble_page(QWebEngineProfile *web_engine_profile,
 	  this,
 	  SLOT(slot_feature_permission_requested(const QUrl &,
 						 QWebEnginePage::Feature)));
+#else
+#endif
   connect(m_view,
 	  SIGNAL(iconChanged(const QIcon &)),
 	  this,
@@ -404,6 +409,13 @@ dooble_page::dooble_page(QWebEngineProfile *web_engine_profile,
 	  SIGNAL(peekaboo_text(const QString &)),
 	  this,
 	  SIGNAL(peekaboo_text(const QString &)));
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
+#else
+  connect(m_view,
+	  SIGNAL(permissionRequested(QWebEnginePermission)),
+	  this,
+	  SLOT(slot_permission_requested(QWebEnginePermission)));
+#endif
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
   connect(m_view,
 	  SIGNAL(printRequested(void)),
@@ -1619,7 +1631,7 @@ void dooble_page::reload_periodically(int seconds)
       m_reload_periodically_seconds = 0;
       m_reload_timer.stop();
     }
-  else
+  else if(seconds == 15 || seconds == 30 || seconds == 45 || seconds == 60)
     {
       m_reload_periodically_seconds = seconds;
       m_reload_timer.start(1000 * m_reload_periodically_seconds);
@@ -2119,10 +2131,9 @@ void dooble_page::slot_export_as_png_timer_timeout(void)
 
 void dooble_page::slot_favorite_changed(const QUrl &url, bool state)
 {
-  if(state)
-    if(m_view->history()->currentItem().url() == url)
-      dooble::s_history->save_item
-	(m_view->icon(), m_view->history()->currentItem(), true);
+  if(m_view->history()->currentItem().url() == url && state)
+    dooble::s_history->save_item
+      (m_view->icon(), m_view->history()->currentItem(), true);
 }
 
 void dooble_page::slot_feature_permission_allow(void)
@@ -2133,11 +2144,19 @@ void dooble_page::slot_feature_permission_allow(void)
   m_ui.feature_permission_popup_message->setVisible(false);
   prepare_progress_label_position();
 
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
   if(feature != -1)
     m_view->set_feature_permission
       (m_ui.feature_permission_url->property("security_origin").toUrl(),
        QWebEnginePage::Feature(feature),
        QWebEnginePage::PermissionGrantedByUser);
+#else
+  if(feature != -1)
+    m_view->set_feature_permission
+      (m_ui.feature_permission_url->property("security_origin").toUrl(),
+       QWebEnginePermission::PermissionType(feature),
+       QWebEnginePermission::State::Granted);
+#endif
 
   m_ui.feature_permission_url->setProperty("feature", -1);
   m_ui.feature_permission_url->setProperty("security_origin", QUrl());
@@ -2151,20 +2170,34 @@ void dooble_page::slot_feature_permission_deny(void)
   m_ui.feature_permission_popup_message->setVisible(false);
   prepare_progress_label_position();
 
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
   if(feature != -1)
     m_view->set_feature_permission
       (m_ui.feature_permission_url->property("security_origin").toUrl(),
        QWebEnginePage::Feature(feature),
        QWebEnginePage::PermissionDeniedByUser);
+#else
+  if(feature != -1)
+    m_view->set_feature_permission
+      (m_ui.feature_permission_url->property("security_origin").toUrl(),
+       QWebEnginePermission::PermissionType(feature),
+       QWebEnginePermission::State::Denied);
+#endif
 
   m_ui.feature_permission_url->setProperty("feature", -1);
   m_ui.feature_permission_url->setProperty("security_origin", QUrl());
 }
 
 void dooble_page::slot_feature_permission_request_canceled
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
 (const QUrl &security_origin, QWebEnginePage::Feature feature)
+#else
+(const QUrl &security_origin, QWebEnginePermission::PermissionType feature)
+#endif
 {
-  if(feature == m_ui.feature_permission_url->property("feature").toInt() &&
+  auto const f = static_cast<int> (feature);
+
+  if(f == m_ui.feature_permission_url->property("feature").toInt() &&
      m_ui.feature_permission_url->property("security_origin").toUrl() ==
      security_origin)
     {
@@ -2174,28 +2207,51 @@ void dooble_page::slot_feature_permission_request_canceled
 }
 
 void dooble_page::slot_feature_permission_requested
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
 (const QUrl &security_origin, QWebEnginePage::Feature feature)
+#else
+(const QUrl &security_origin,
+ QWebEnginePermission::PermissionType feature,
+ QWebEnginePermission::State &state)
+#endif
 {
   if(!dooble::s_settings->setting("features_permissions").toBool())
     {
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
       m_view->set_feature_permission
 	(security_origin, feature, QWebEnginePage::PermissionDeniedByUser);
+#else
+      m_view->set_feature_permission
+	(security_origin,
+	 feature,
+	 state = QWebEnginePermission::State::Denied);
+#endif
       return;
     }
-  else if(security_origin.isEmpty() || !security_origin.isValid())
+  else if(!security_origin.isValid() || security_origin.isEmpty())
     {
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
       m_view->set_feature_permission
 	(security_origin, feature, QWebEnginePage::PermissionDeniedByUser);
+#else
+      m_view->set_feature_permission
+	(security_origin,
+	 feature,
+	 state = QWebEnginePermission::State::Denied);
+#endif
       return;
     }
   else if(m_ui.feature_permission_popup_message->isVisible())
     {
-      /*
-      ** Deny the feature.
-      */
-
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
       m_view->set_feature_permission
 	(security_origin, feature, QWebEnginePage::PermissionDeniedByUser);
+#else
+      m_view->set_feature_permission
+	(security_origin,
+	 feature,
+	 state = QWebEnginePermission::State::Denied);
+#endif
       return;
     }
 
@@ -2211,24 +2267,40 @@ void dooble_page::slot_feature_permission_requested
     case 0:
       {
 	m_ui.feature_permission_popup_message->setVisible(false);
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
 	m_view->set_feature_permission
 	  (security_origin, feature, QWebEnginePage::PermissionDeniedByUser);
+#else
+	m_view->set_feature_permission
+	  (security_origin,
+	   feature,
+	   state = QWebEnginePermission::State::Denied);
+#endif
 	prepare_progress_label_position();
 	return;
       }
     case 1:
       {
 	m_ui.feature_permission_popup_message->setVisible(false);
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
 	m_view->set_feature_permission
 	  (security_origin, feature, QWebEnginePage::PermissionGrantedByUser);
+#else
+	m_view->set_feature_permission
+	  (security_origin,
+	   feature,
+	   state = QWebEnginePermission::State::Granted);
+#endif
 	prepare_progress_label_position();
 	return;
       }
     }
 
-  m_ui.feature_permission_url->setProperty("feature", feature);
+  m_ui.feature_permission_url->setProperty
+    ("feature", static_cast<int> (feature));
   m_ui.feature_permission_url->setProperty("security_origin", security_origin);
 
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
   switch(feature)
     {
 #ifndef DOOBLE_FREEBSD_WEBENGINE_MISMATCH
@@ -2302,6 +2374,81 @@ void dooble_page::slot_feature_permission_requested
 	break;
       }
     }
+#else
+  switch(feature)
+    {
+#ifndef DOOBLE_FREEBSD_WEBENGINE_MISMATCH
+    case QWebEnginePermission::PermissionType::DesktopAudioVideoCapture:
+      {
+	m_ui.feature_permission_url->setText
+	  (tr("The URL <b>%1</b> is requesting "
+	      "Desktop Audio Video Capture access.").
+	   arg(security_origin.toString()));
+	break;
+      }
+#endif
+#ifndef DOOBLE_FREEBSD_WEBENGINE_MISMATCH
+    case QWebEnginePermission::PermissionType::DesktopVideoCapture:
+      {
+	m_ui.feature_permission_url->setText
+	  (tr("The URL <b>%1</b> is requesting Desktop Video Capture access.").
+	   arg(security_origin.toString()));
+	break;
+      }
+#endif
+    case QWebEnginePermission::PermissionType::Geolocation:
+      {
+	m_ui.feature_permission_url->setText
+	  (tr("The URL <b>%1</b> is requesting Geo Location access.").
+	   arg(security_origin.toString()));
+	break;
+      }
+    case QWebEnginePermission::PermissionType::MediaAudioCapture:
+      {
+	m_ui.feature_permission_url->setText
+	  (tr("The URL <b>%1</b> is requesting Media Audio Capture access.").
+	   arg(security_origin.toString()));
+	break;
+      }
+    case QWebEnginePermission::PermissionType::MediaAudioVideoCapture:
+      {
+	m_ui.feature_permission_url->setText
+	  (tr("The URL <b>%1</b> is requesting "
+	      "Media Audio Video Capture access.").
+	   arg(security_origin.toString()));
+	break;
+      }
+    case QWebEnginePermission::PermissionType::MediaVideoCapture:
+      {
+	m_ui.feature_permission_url->setText
+	  (tr("The URL <b>%1</b> is requesting Media Video Capture access.").
+	   arg(security_origin.toString()));
+	break;
+      }
+    case QWebEnginePermission::PermissionType::MouseLock:
+      {
+	m_ui.feature_permission_url->setText
+	  (tr("The URL <b>%1</b> is requesting Mouse Lock access.").
+	   arg(security_origin.toString()));
+	break;
+      }
+    case QWebEnginePermission::PermissionType::Notifications:
+      {
+	m_ui.feature_permission_url->setText
+	  (tr("The URL <b>%1</b> is requesting Notifications access.").
+	   arg(security_origin.toString()));
+	break;
+      }
+    default:
+      {
+	m_ui.feature_permission_url->setProperty("feature", -1);
+	m_ui.feature_permission_url->setText
+	  (tr("The URL <b>%1</b> is requesting access to an unknown feature.").
+	   arg(security_origin.toString()));
+	break;
+      }
+    }
+#endif
 
   m_ui.feature_permission_popup_message->setVisible(true);
   prepare_progress_label_position();
@@ -2368,7 +2515,7 @@ void dooble_page::slot_icon_changed(const QIcon &icon)
 {
   Q_UNUSED(icon);
 
-  if(dooble::s_history->is_favorite(m_view->url()) || !m_is_private)
+  if(!m_is_private || dooble::s_history->is_favorite(m_view->url()))
     dooble::s_history->save_favicon(m_view->icon(), m_view->url());
 
   if(!m_is_private)
@@ -2446,12 +2593,6 @@ void dooble_page::slot_javascript_allow_popup_exception(void)
 
 void dooble_page::slot_javascript_console(void)
 {
-  if(!m_javascript_console)
-    {
-      m_javascript_console = new dooble_javascript(this);
-      m_javascript_console->set_page(m_view->page());
-    }
-
   m_javascript_console->showNormal();
   m_javascript_console->raise();
   m_javascript_console->activateWindow();
@@ -2524,8 +2665,8 @@ void dooble_page::slot_load_finished(bool ok)
   ** url may be unrelated.
   */
 
-  if(dooble::s_history->
-     is_favorite(m_view->history()->currentItem().url()) || !m_is_private)
+  if(!m_is_private ||
+     dooble::s_history->is_favorite(m_view->history()->currentItem().url()))
     dooble::s_history->save_item
       (QIcon(), m_view->history()->currentItem(), true);
 
@@ -2814,6 +2955,19 @@ void dooble_page::slot_open_link(void)
   if(m_ui.address->isVisible())
     m_ui.address->setFocus();
 }
+
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
+#else
+void dooble_page::slot_permission_requested(QWebEnginePermission permission)
+{
+  auto state = QWebEnginePermission::State::Invalid;
+
+  slot_feature_permission_requested
+    (permission.origin(), permission.permissionType(), state);
+  state == QWebEnginePermission::State::Granted ?
+    permission.grant() : permission.deny();
+}
+#endif
 
 void dooble_page::slot_prepare_backward_menu(void)
 {

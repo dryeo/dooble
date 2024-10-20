@@ -95,32 +95,39 @@ int main(int argc, char *argv[])
   qputenv("QV4_FORCE_INTERPRETER", "1");
 
   QList<QUrl> urls;
+  QString screen_mode("");
   auto attach = false;
-  auto full_screen = false;
+  auto disable_javascript = false;
   auto test_aes = false;
   auto test_aes_performance = false;
   auto test_threefish = false;
   auto test_threefish_performance = false;
+  int reload_periodically = -1;
 
   for(int i = 1; i < argc; i++)
     if(argv && argv[i])
       {
 	if(strcmp(argv[i], "--attach") == 0)
 	  attach = true;
+	else if(strcmp(argv[i], "--disable-javascript") == 0)
+	  disable_javascript = true;
 	else if(strcmp(argv[i], "--executable-current-url") == 0)
 	  i += 1;
 	else if(strcmp(argv[i], "--full-screen") == 0)
-	  full_screen = true;
+	  screen_mode = "full-screen";
 	else if(strcmp(argv[i], "--help") == 0)
 	  {
 	    qDebug() << "Dooble";
 	    qDebug() << " --attach";
+	    qDebug() << " --disable-javascript";
 	    qDebug() << " --executable-current-url PROGRAM";
 	    qDebug() << " --full-screen";
 	    qDebug() << " --help";
 	    qDebug() << " --listen";
 	    qDebug() << " --load-url URL";
+	    qDebug() << " --normal-screen";
 	    qDebug() << " --private";
+	    qDebug() << " --reload-periodically 15, 30, 45, 60";
 	    qDebug() << " --test-aes";
 	    qDebug() << " --test-aes-performance";
 	    qDebug() << " --test-threefish";
@@ -149,6 +156,21 @@ int main(int argc, char *argv[])
 		  urls << url;
 	      }
 	  }
+	else if(strcmp(argv[i], "--normal-screen") == 0)
+	  screen_mode = "normal-screen";
+	else if(strcmp(argv[i], "--reload-periodically") == 0)
+	  {
+	    i += 1;
+
+	    if(argc > i && argv[i])
+	      {
+		QString const a(argv[i]);
+		auto ok = false;
+
+		reload_periodically = a.toInt(&ok);
+		reload_periodically = ok ? reload_periodically : -1;
+	      }
+	  }
 	else if(strcmp(argv[i], "--test-aes") == 0)
 	  test_aes = true;
 	else if(strcmp(argv[i], "--test-aes-performance") == 0)
@@ -157,6 +179,8 @@ int main(int argc, char *argv[])
 	  test_threefish = true;
 	else if(strcmp(argv[i], "--test-threefish-performance") == 0)
 	  test_threefish_performance = true;
+	else if(strcmp(argv[i], "-style") == 0)
+	  i += 1;
 	else
 	  {
 	    auto url(QUrl::fromUserInput(argv[i]));
@@ -402,7 +426,7 @@ int main(int argc, char *argv[])
   */
 
   QSplashScreen splash;
-  auto splash_screen = dooble_settings::setting
+  auto const splash_screen = dooble_settings::setting
     ("splash_screen", true).toBool();
 
   if(splash_screen)
@@ -423,7 +447,9 @@ int main(int argc, char *argv[])
     }
 
   dooble_random::initialize();
-  dooble::s_application->processEvents();
+
+  if(splash_screen)
+    dooble::s_application->processEvents();
 
 #ifdef Q_OS_MACOS
   /*
@@ -528,14 +554,16 @@ int main(int argc, char *argv[])
   auto const arguments(QCoreApplication::arguments());
   auto d = new dooble // Not deleted.
     (urls,
-     arguments.contains("--private") ||
-     dooble::s_settings->setting("private_mode").toBool(),
-     attach);
+     attach,
+     disable_javascript,
+     arguments.contains("--private") || dooble::s_settings->
+                                        setting("private_mode").toBool(),
+     reload_periodically);
 
   if(attach && d->attached())
     {
       d->close();
-      return 0;
+      return EXIT_SUCCESS;
     }
 
   dooble::s_google_translate_url = qgetenv
@@ -640,10 +668,12 @@ int main(int argc, char *argv[])
       splash.finish(d);
     }
 
-  if(!full_screen)
-    QTimer::singleShot(0, d, SLOT(show(void)));
-  else
+  if(screen_mode == "full-screen")
     QTimer::singleShot(0, d, SLOT(showFullScreen(void)));
+  else if(screen_mode == "normal-screen")
+    QTimer::singleShot(0, d, SLOT(showNormal(void)));
+  else
+    QTimer::singleShot(0, d, SLOT(show(void)));
 
   auto const rc = dooble::s_application->exec();
 

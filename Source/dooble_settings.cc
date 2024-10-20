@@ -723,16 +723,27 @@ int dooble_settings::main_menu_bar_visible_key(void)
 }
 
 int dooble_settings::site_feature_permission
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
 (const QUrl &url, QWebEnginePage::Feature feature)
+#else
+(const QUrl &url, QWebEnginePermission::PermissionType feature)
+#endif
 {
   if(!s_site_features_permissions.contains(url))
     return -1;
 
   auto const values(s_site_features_permissions.values(url));
 
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
   foreach(auto const &value, values)
     if(feature == QWebEnginePage::Feature(value.first) && value.first != -1)
       return value.second ? 1 : 0;
+#else
+  foreach(auto const &value, values)
+    if(feature == QWebEnginePermission::PermissionType(value.first) &&
+       value.first != -1)
+      return value.second ? 1 : 0;
+#endif
 
   return -1;
 }
@@ -1193,6 +1204,10 @@ void dooble_settings::prepare_web_engine_environment_variables(void)
 
   if((first_time = s_web_engine_settings_environment.isEmpty()))
     {
+      s_web_engine_settings_environment["--allow-insecure-localhost"] =
+	"singular";
+      s_web_engine_settings_environment["--allow-running-insecure-content"] =
+	"singular";
       s_web_engine_settings_environment
 	["--blink-settings=forceDarkModeEnabled"] = "boolean";
       s_web_engine_settings_environment["--disable-reading-from-canvas"] =
@@ -1241,7 +1256,7 @@ void dooble_settings::prepare_web_engine_environment_variables(void)
 	query.setForwardOnly(true);
 	query.prepare
 	  ("SELECT key, value FROM dooble_web_engine_settings "
-	   "WHERE environment_variable = 1");
+	   "WHERE environment_variable = 1 ORDER BY 1");
 
 	if(query.exec())
 	  while(query.next())
@@ -2089,7 +2104,11 @@ void dooble_settings::set_settings_path(const QString &path)
 }
 
 void dooble_settings::set_site_feature_permission
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
 (const QUrl &url, QWebEnginePage::Feature feature, bool state)
+#else
+(const QUrl &url, QWebEnginePermission::PermissionType feature, bool state)
+#endif
 {
   if(url.isEmpty() || !url.isValid())
     return;
@@ -2116,7 +2135,8 @@ void dooble_settings::set_site_feature_permission
 	item->setCheckState(Qt::Unchecked);
 
       item->setData(Qt::UserRole, url);
-      item->setData(Qt::ItemDataRole(Qt::UserRole + 1), feature);
+      item->setData
+	(Qt::ItemDataRole(Qt::UserRole + 1), static_cast<int> (feature));
       item->setFlags(Qt::ItemIsEnabled |
 		     Qt::ItemIsSelectable |
 		     Qt::ItemIsUserCheckable);
@@ -2126,13 +2146,15 @@ void dooble_settings::set_site_feature_permission
 	(dooble_text_utilities::
 	 web_engine_page_feature_to_pretty_string(feature));
       item->setData(Qt::UserRole, url);
-      item->setData(Qt::ItemDataRole(Qt::UserRole + 1), feature);
+      item->setData
+	(Qt::ItemDataRole(Qt::UserRole + 1), static_cast<int> (feature));
       item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
       m_ui.features_permissions->setItem
 	(m_ui.features_permissions->rowCount() - 1, 1, item);
       item = new QTableWidgetItem(url.toString());
       item->setData(Qt::UserRole, url);
-      item->setData(Qt::ItemDataRole(Qt::UserRole + 1), feature);
+      item->setData
+	(Qt::ItemDataRole(Qt::UserRole + 1), static_cast<int> (feature));
       item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
       m_ui.features_permissions->setItem
 	(m_ui.features_permissions->rowCount() - 1, 2, item);
@@ -2147,6 +2169,7 @@ void dooble_settings::set_site_feature_permission
     {
       auto const values(s_site_features_permissions.values(url));
 
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
       foreach(auto const &value, values)
 	if(feature == QWebEnginePage::Feature(value.first) &&
 	   value.first != -1)
@@ -2157,9 +2180,22 @@ void dooble_settings::set_site_feature_permission
 	      (url, QPair<int, bool> (value.first, true));
 	    break;
 	  }
+#else
+      foreach(auto const &value, values)
+	if(feature == QWebEnginePermission::PermissionType(value.first) &&
+	   value.first != -1)
+	  {
+	    s_site_features_permissions.remove
+	      (url, QPair<int, bool> (value.first, false));
+	    s_site_features_permissions.remove
+	      (url, QPair<int, bool> (value.first, true));
+	    break;
+	  }
+#endif
     }
 
-  s_site_features_permissions.insert(url, QPair<int, bool> (feature, state));
+  s_site_features_permissions.insert
+    (url, QPair<int, bool> (static_cast<int> (feature), state));
   QApplication::restoreOverrideCursor();
 
   if(!dooble::s_cryptography || !dooble::s_cryptography->authenticated())
@@ -2189,14 +2225,15 @@ void dooble_settings::set_site_feature_permission
 
 	auto data
 	  (dooble::s_cryptography->
-	   encrypt_then_mac(QByteArray::number(feature)));
+	   encrypt_then_mac(QByteArray::number(static_cast<int> (feature))));
 
 	if(data.isEmpty())
 	  goto done_label;
 	else
 	  query.addBindValue(data.toBase64());
 
-	data = dooble::s_cryptography->hmac(QByteArray::number(feature));
+	data = dooble::s_cryptography->hmac
+	  (QByteArray::number(static_cast<int> (feature)));
 
 	if(data.isEmpty())
 	  goto done_label;
@@ -2766,11 +2803,19 @@ void dooble_settings::slot_features_permissions_item_changed
   if(item->column() != 0)
     return;
 
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
   set_site_feature_permission
     (item->data(Qt::UserRole).toUrl(),
      QWebEnginePage::Feature(item->data(Qt::ItemDataRole(Qt::UserRole + 1)).
 			     toInt()),
      item->checkState() == Qt::Checked);
+#else
+  set_site_feature_permission
+    (item->data(Qt::UserRole).toUrl(),
+     QWebEnginePermission::
+     PermissionType(item->data(Qt::ItemDataRole(Qt::UserRole + 1)).toInt()),
+     item->checkState() == Qt::Checked);
+#endif
 }
 
 void dooble_settings::slot_general_timer_timeout(void)
@@ -3222,10 +3267,17 @@ void dooble_settings::slot_populate(void)
 		       Qt::ItemIsSelectable |
 		       Qt::ItemIsUserCheckable);
 	m_ui.features_permissions->setItem(i, 0, item);
+#if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
 	item = new QTableWidgetItem
 	  (dooble_text_utilities::
-	   web_engine_page_feature_to_pretty_string(QWebEnginePage::
-						    Feature(it.value().first)));
+	   web_engine_page_feature_to_pretty_string
+	   (QWebEnginePage::Feature(it.value().first)));
+#else
+	item = new QTableWidgetItem
+	  (dooble_text_utilities::
+	   web_engine_page_feature_to_pretty_string
+	   (QWebEnginePermission::PermissionType(it.value().first)));
+#endif
 	item->setData(Qt::UserRole, it.key());
 	item->setData(Qt::ItemDataRole(Qt::UserRole + 1), it.value().first);
 	item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
