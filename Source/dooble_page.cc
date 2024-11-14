@@ -29,6 +29,7 @@
 #include <QDir>
 #include <QPainter>
 #include <QProcess>
+#include <QTemporaryFile>
 #include <QToolTip>
 #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
 #include <QWebEngineFindTextResult>
@@ -219,6 +220,10 @@ dooble_page::dooble_page(QWebEngineProfile *web_engine_profile,
 	  SIGNAL(load_page(const QUrl &)),
 	  this,
 	  SLOT(slot_load_page(void)));
+  connect(m_ui.address,
+	  SIGNAL(publish(void)),
+	  this,
+	  SLOT(slot_publish(void)));
   connect(m_ui.address,
 	  SIGNAL(returnPressed(void)),
 	  this,
@@ -473,6 +478,10 @@ dooble_page::dooble_page(QWebEngineProfile *web_engine_profile,
 	  this,
 	  SLOT(slot_scroll_position_changed(const QPointF &)));
   connect(this,
+	  SIGNAL(html_ready(const QString &)),
+	  this,
+	  SLOT(slot_publish_html(const QString &)));
+  connect(this,
 	  SIGNAL(javascript_allow_popup_exception(const QUrl &)),
 	  dooble::s_settings,
 	  SLOT(slot_new_javascript_block_popup_exception(const QUrl &)));
@@ -499,6 +508,7 @@ dooble_page::dooble_page(QWebEngineProfile *web_engine_profile,
   m_progress_label->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   m_progress_label->setStyleSheet("QLabel {background-color: #e0e0e0;}");
   m_progress_label->setVisible(false);
+  move_buttons();
   prepare_icons();
   prepare_shortcuts();
   prepare_standard_menus();
@@ -719,6 +729,15 @@ void dooble_page::go_to_forward_item(int index)
 
 void dooble_page::hide_location_frame(bool state)
 {
+  for(int i = 0; i < m_ui.side_layout->count(); i++)
+    if(m_ui.side_layout->itemAt(i))
+      {
+	auto widget = m_ui.side_layout->itemAt(i)->widget();
+
+	if(widget)
+	  widget->setVisible(!state);
+      }
+
   m_ui.top_frame->setVisible(!state);
 }
 
@@ -733,7 +752,7 @@ void dooble_page::inject_custom_css(void)
   slot_inject_custom_css();
 }
 
- void dooble_page::javascript_console(void)
+void dooble_page::javascript_console(void)
 {
   slot_javascript_console();
 }
@@ -743,6 +762,76 @@ void dooble_page::load(const QUrl &url)
   m_view->stop();
   m_view->load(url);
   m_view->setUrl(url); // Set the address widget's text.
+}
+
+void dooble_page::move_buttons(void)
+{
+  auto layout = m_ui.top_frame->layout();
+
+  if(!layout)
+    return;
+
+  for(int i = layout->count() - 1; i >= 0; i--)
+    if(layout->itemAt(i))
+      {
+	auto widget = layout->itemAt(i)->widget();
+
+	if(!(qobject_cast<QToolButton *> (widget) ||
+	     qobject_cast<dooble_tool_button *> (widget)))
+	  continue;
+
+	if(m_ui.zoom_value != widget && widget)
+	  layout->removeWidget(widget);
+      }
+
+  for(int i = m_ui.side_layout->count() - 1; i >= 0; i--)
+    if(m_ui.side_layout->itemAt(i))
+      {
+	auto widget = m_ui.side_layout->itemAt(i)->widget();
+
+	if(widget)
+	  m_ui.side_layout->removeWidget(widget);
+	else
+	  delete m_ui.side_layout->takeAt(i);
+      }
+
+  if(dooble_settings::setting("lefty_buttons").toBool() == false)
+    {
+      layout->removeWidget(m_ui.address);
+      layout->removeWidget(m_ui.zoom_value);
+      layout->addWidget(m_ui.backward);
+      layout->addWidget(m_ui.forward);
+      layout->addWidget(m_ui.reload);
+      layout->addWidget(m_ui.home);
+      layout->addWidget(m_ui.address);
+      layout->addWidget(m_ui.zoom_value);
+      layout->addWidget(m_ui.accepted_or_blocked);
+      layout->addWidget(m_ui.downloads);
+      layout->addWidget(m_ui.downloads);
+      layout->addWidget(m_ui.favorites);
+      layout->addWidget(m_ui.favorites);
+      layout->addWidget(m_ui.menu);
+      m_ui.side_layout->setContentsMargins(0, 0, 0, 0);
+    }
+  else
+    {
+      m_ui.side_layout->addWidget(m_ui.backward);
+      m_ui.side_layout->addWidget(m_ui.forward);
+      m_ui.side_layout->addWidget(m_ui.reload);
+      m_ui.side_layout->addWidget(m_ui.home);
+      m_ui.side_layout->addWidget(m_ui.accepted_or_blocked);
+      m_ui.side_layout->addWidget(m_ui.downloads);
+      m_ui.side_layout->addWidget(m_ui.downloads);
+      m_ui.side_layout->addWidget(m_ui.favorites);
+      m_ui.side_layout->addWidget(m_ui.favorites);
+      m_ui.side_layout->addWidget(m_ui.menu);
+      m_ui.side_layout->addSpacerItem
+	(new QSpacerItem(40,
+			 20,
+			 QSizePolicy::Expanding,
+			 QSizePolicy::Expanding));
+      m_ui.side_layout->setContentsMargins(5, 0, 0, 0);
+    }
 }
 
 void dooble_page::prepare_export_as_png(const QString &file_name)
@@ -3064,9 +3153,9 @@ void dooble_page::slot_proxy_authentication_required
 (const QUrl &url, QAuthenticator *authenticator, const QString &proxy_host)
 {
   if(!authenticator ||
+     !url.isValid() ||
      authenticator->isNull() ||
-     proxy_host.isEmpty() ||
-     !url.isValid())
+     proxy_host.isEmpty())
     {
       if(authenticator)
 	*authenticator = QAuthenticator();
@@ -3097,6 +3186,35 @@ void dooble_page::slot_proxy_authentication_required
     {
       QApplication::processEvents();
       *authenticator = QAuthenticator();
+    }
+}
+
+void dooble_page::slot_publish(void)
+{
+  m_view->page()->toHtml
+    ([this] (const QString &result) mutable {emit html_ready(result);});
+}
+
+void dooble_page::slot_publish_html(const QString &html)
+{
+  QTemporaryFile file
+    (dooble_address_widget::page_publication_directory_name() +
+     QDir::separator() +
+     "DooblePublishedPageXXXXXX.txt");
+
+  if(file.open())
+    {
+      QTextStream stream(&file);
+      auto const title
+	(m_view->title().remove('\n').remove('\r').simplified().trimmed());
+      auto const url
+	(m_view->url().toDisplayString().remove('\n').remove('\r'));
+
+      Q_UNUSED(file.fileName()); // Prevents removal of file.
+      file.setAutoRemove(false);
+      stream << title << Qt::endl;
+      stream << url << Qt::endl;
+      stream << html;
     }
 }
 
@@ -3178,6 +3296,7 @@ void dooble_page::slot_settings_applied(void)
   auto const zoom_factor = dooble_settings::setting("zoom").toDouble() / 100.0;
 
   m_view->setZoomFactor(zoom_factor);
+  move_buttons();
   prepare_icons();
   prepare_style_sheets();
   prepare_zoom_toolbutton(zoom_factor);

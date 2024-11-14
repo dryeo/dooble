@@ -41,6 +41,7 @@ class dooble_javascript: public QDialog
 
  public:
   dooble_javascript(QWidget *parent);
+  static void purge(void);
   void set_page(QWebEnginePage *page);
 
  private:
@@ -53,6 +54,7 @@ class dooble_javascript: public QDialog
   void slot_delete_others(void);
   void slot_execute(void);
   void slot_item_selection_changed(void);
+  void slot_javascript_scripts_cleared(void);
   void slot_load_finished(bool state);
   void slot_refresh(void);
   void slot_refresh_others(void);

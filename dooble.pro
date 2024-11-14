@@ -6,13 +6,7 @@ cache()
 include(dooble-source.pro)
 
 macx {
-exists(/opt/homebrew/Cellar/qt/6.7.2/share/qt/libexec/qwebengine_convert_dict) {
-CT = "/opt/homebrew/Cellar/qt/6.7.2/share/qt/libexec/qwebengine_convert_dict"
-}
-
-exists(/usr/local/Cellar/qt/6.7.2/share/qt/libexec/qwebengine_convert_dict) {
-CT = "/usr/local/Cellar/qt/6.7.2/share/qt/libexec/qwebengine_convert_dict"
-}
+CT = ""
 } else {
 versionAtLeast(QT_VERSION, 6.0.0) {
 freebsd-* {
@@ -215,15 +209,9 @@ LIBS += -lgpgme
 
 unix {
 QMAKE_LFLAGS_RPATH =
-purge.commands = find . -name '*~*' -exec rm -f {} \;
+purge.commands = find . -name \'*~*\' -exec rm -f {} \;
 } else {
 purge.commands =
-}
-
-doxygen.commands =
-
-exists(/usr/bin/doxygen) {
-doxygen.commands = doxygen dooble.doxygen
 }
 
 FILES = /usr/include/linux/mman.h \
@@ -367,8 +355,13 @@ QMAKE_DISTCLEAN += -r qtwebengine_dictionaries \
                    .qmake.cache \
                    .qmake.stash \
                    temp
+
+isEmpty(CT) {
+} else {
 QMAKE_EXTRA_COMPILERS += dictoolbuild
-QMAKE_EXTRA_TARGETS = build-deb dmg doxygen purge
+}
+
+QMAKE_EXTRA_TARGETS = build-deb dmg purge
 
 macx {
 ICON            = Icons/Logo/dooble.icns
@@ -723,7 +716,7 @@ copyinfoplist.extra	= cp Data/Info.plist Dooble.d/Dooble.app/Contents/.
 copyinfoplist.path	= Dooble.d
 macdeployqt.extra	= $$[QT_INSTALL_BINS]/macdeployqt Dooble.d/Dooble.app -executable=Dooble.d/Dooble.app/Contents/MacOS/Dooble
 macdeployqt.path	= Dooble.app
-purgeheaders.extra	= rm -fr Dooble.d/Dooble.app/Contents/Frameworks/QtWebEngineCore.framework/Headers && rm -fr Dooble.d/Dooble.app/Contents/Frameworks/QtWebEngineCore.framework/Versions/5/Headers 
+purgeheaders.extra	= rm -fr Dooble.d/Dooble.app/Contents/Frameworks/QtWebEngineCore.framework/Headers && rm -fr Dooble.d/Dooble.app/Contents/Frameworks/QtWebEngineCore.framework/Versions/5/Headers
 purgeheaders.path	= Dooble.d
 preinstall.extra	= rm -fr Dooble.d/Dooble.app
 preinstall.path		= Dooble.d
@@ -742,6 +735,8 @@ INSTALLS	= copycharts \
 }
 
 macx:app_bundle {
+isEmpty(CT) {
+} else {
 for (base_path, dict_base_paths) {
 base_path_splitted = $$split(base_path, /)
 base_name = $$last(base_path_splitted)
@@ -750,4 +745,5 @@ binary_dict_files.files += $${DICTIONARIES_DIR}/$${base_name}.bdic
 
 binary_dict_files.path = Contents/Resources/$$DICTIONARIES_DIR
 QMAKE_BUNDLE_DATA += binary_dict_files
+}
 }
