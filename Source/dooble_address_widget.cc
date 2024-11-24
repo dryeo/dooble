@@ -42,6 +42,7 @@
 
 dooble_address_widget::dooble_address_widget(QWidget *parent):QLineEdit(parent)
 {
+  m_edited = false;
   m_favorite = new QToolButton(this);
   m_favorite->setAutoRaise(true);
   m_favorite->setCursor(Qt::ArrowCursor);
@@ -207,6 +208,11 @@ QString dooble_address_widget::page_publication_directory_name(void)
   path.append("Dooble Published Pages");
   QDir().mkdir(path);
   return path;
+}
+
+bool dooble_address_widget::edited(void) const
+{
+  return m_edited;
 }
 
 bool dooble_address_widget::event(QEvent *event)
@@ -456,6 +462,11 @@ void dooble_address_widget::setText(const QString &text)
   setToolTip(QLineEdit::text());
 }
 
+void dooble_address_widget::set_edited(const bool state)
+{
+  m_edited = state;
+}
+
 void dooble_address_widget::set_item_icon(const QIcon &icon, const QUrl &url)
 {
   m_completer->set_item_icon(icon, url);
@@ -662,8 +673,8 @@ void dooble_address_widget::slot_url_changed(const QUrl &url)
 
   auto length = url.toString().length();
 
-  if(length >
-     static_cast<decltype(length)> (dooble::Limits::MAXIMUM_URL_LENGTH))
+  if(length > static_cast<decltype(length)> (dooble::Limits::
+					     MAXIMUM_URL_LENGTH))
     return;
 
   auto const icon_set(dooble_settings::setting("icon_set").toString());
