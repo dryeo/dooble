@@ -978,6 +978,9 @@ void dooble_page::prepare_shortcuts(void)
       m_shortcuts << new QShortcut(QKeySequence(tr("Ctrl+=")),
 				   this,
 				   SLOT(slot_zoom_in(void)));
+      m_shortcuts << new QShortcut(QKeySequence(tr("Ctrl++")),
+				   this,
+				   SLOT(slot_zoom_in(void)));
       m_shortcuts << new QShortcut(QKeySequence(tr("Ctrl+-")),
 				   this,
 				   SLOT(slot_zoom_out(void)));
