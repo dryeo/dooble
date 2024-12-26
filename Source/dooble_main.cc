@@ -91,6 +91,10 @@ int main(int argc, char *argv[])
 {
   qputenv("QT_ENABLE_REGEXP_JIT", "0");
   qputenv("QV4_FORCE_INTERPRETER", "1");
+#ifdef Q_OS_OS2
+  if (!qEnvironmentVariableIsSet("QT_PM_CP"))
+    qputenv("QT_PM_CP", "1208");
+#endif
 
   QList<QUrl> urls;
   QString screen_mode("");
