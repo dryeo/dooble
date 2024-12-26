@@ -26,9 +26,7 @@
 */
 
 #include <QDir>
-#include <QElapsedTimer>
 #include <QSplashScreen>
-#include <QWebEngineCookieStore>
 #include <QWebEngineProfile>
 #include <QWebEngineSettings>
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
@@ -439,6 +437,7 @@ int main(int argc, char *argv[])
 	 Qt::AlignBottom | Qt::AlignHCenter,
 	 QColor(Qt::white));
       splash.repaint();
+      dooble::s_application->processEvents();
     }
 
   dooble_random::initialize();

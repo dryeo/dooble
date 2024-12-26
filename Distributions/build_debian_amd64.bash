@@ -21,38 +21,38 @@ mkdir -p ./opt/dooble/Data
 mkdir -p ./opt/dooble/Documentation
 mkdir -p ./opt/dooble/Lib
 mkdir -p ./opt/dooble/Translations
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6Charts.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6Core.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6DBus.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6Gui.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6Network.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6OpenGL.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6OpenGLWidgets.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6Positioning.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6PrintSupport.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6Qml.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6QmlModels.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6Quick.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6QuickWidgets.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6Sql.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6Svg.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6WebChannel.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6WebEngineCore.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6WebEngineWidgets.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6Widgets.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libQt6XcbQpa.so.6 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libicudata.so.73 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libicui18n.so.73 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libicuio.so.73 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libicuuc.so.73 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/lib/libicuuc.so.73 ./opt/dooble/Lib/.
-cp -p ~/Qt/6.8.0/gcc_64/libexec/QtWebEngineProcess ./opt/dooble/.
-cp -pr ~/Qt/6.8.0/gcc_64/plugins ./opt/dooble/.
-cp -pr ~/Qt/6.8.0/gcc_64/resources/* ./opt/dooble/.
-cp -pr ~/Qt/6.8.0/gcc_64/translations/*.qm ./opt/dooble/Translations/.
-cp -pr ~/Qt/6.8.0/gcc_64/translations/qtwebengine_locales ./opt/dooble/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6Charts.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6Core.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6DBus.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6Gui.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6Network.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6OpenGL.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6OpenGLWidgets.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6Positioning.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6PrintSupport.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6Qml.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6QmlModels.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6Quick.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6QuickWidgets.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6Sql.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6Svg.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6WebChannel.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6WebEngineCore.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6WebEngineWidgets.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6Widgets.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6XcbQpa.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libicudata.so.73 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libicui18n.so.73 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libicuio.so.73 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libicuuc.so.73 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libicuuc.so.73 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/libexec/QtWebEngineProcess ./opt/dooble/.
+cp -pr ~/Qt/6.8.1/gcc_64/plugins ./opt/dooble/.
+cp -pr ~/Qt/6.8.1/gcc_64/resources/* ./opt/dooble/.
+cp -pr ~/Qt/6.8.1/gcc_64/translations/*.qm ./opt/dooble/Translations/.
+cp -pr ~/Qt/6.8.1/gcc_64/translations/qtwebengine_locales ./opt/dooble/.
 chmod -x,g+w ./opt/dooble/Lib/*
-~/Qt/6.8.0/gcc_64/bin/qmake -o Makefile dooble.pro && make -j $(nproc)
+~/Qt/6.8.1/gcc_64/bin/qmake -o Makefile dooble.pro && make -j $(nproc)
 cp -p ./Documentation/Documents/*.pdf ./opt/dooble/Documentation/.
 cp -p ./Documentation/KDE ./opt/dooble/Documentation/.
 cp -p ./Documentation/TO-DO ./opt/dooble/Documentation/.
@@ -63,7 +63,7 @@ cp -p ./Translations/*.qm ./opt/dooble/Translations/.
 cp -pr ./Charts ./opt/dooble/.
 cp -pr ./Data/*.txt ./opt/dooble/Data/.
 cp -pr ./Data/README ./opt/dooble/Data/.
-cp -pr ./qtwebengine_dictionaries ./opt/dooble/.
+cp -pr ./qtwebengine_dictionaries ./opt/dooble/. 2>/dev/null
 find ./opt/dooble/plugins -name '*.so' -exec chmod -x {} \;
 mkdir -p dooble-debian.d/opt
 mkdir -p dooble-debian.d/usr/bin
@@ -74,7 +74,7 @@ cp -pr Distributions/UBUNTU-24.04 dooble-debian.d/DEBIAN
 cp -r ./opt/dooble dooble-debian.d/opt/.
 cp Icons/Logo/dooble.png dooble-debian.d/usr/share/pixmaps/.
 cp dooble.sh dooble-debian.d/usr/bin/dooble
-fakeroot dpkg-deb --build dooble-debian.d Dooble-2024.08.19_amd64.deb
+fakeroot dpkg-deb --build dooble-debian.d Dooble-2024.12.30_amd64.deb
 make distclean
 rm -fr ./opt
 rm -fr dooble-debian.d

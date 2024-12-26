@@ -25,9 +25,14 @@
 ** DOOBLE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef DOOBLE_VERSION_FILE_URL
+#define DOOBLE_VERSION_FILE_URL				\
+  "https://raw.githubusercontent.com/"			\
+  "textbrowser/dooble/master/Source/dooble_version.h"
+#endif
 #ifndef DOOBLE_VERSION_STRING
-#define DOOBLE_VERSION_STRING "2024.11.23"
+#define DOOBLE_VERSION_STRING "2024.12.30"
 #endif
 #ifndef DOOBLE_VERSION_STRING_LTS
-#define DOOBLE_VERSION_STRING_LTS "2024.09.29"
+#define DOOBLE_VERSION_STRING_LTS "2024.12.30"
 #endif
