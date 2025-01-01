@@ -4,10 +4,16 @@ History of OS/2-specific changes for Dooble
 This file contains only OS/2-specific changes. Dooble's own changes are listed
 under Dooble's "Help -> Release Notes" main menu entry.
 
+Version 2024.12.31 (2024.12.31)
+-------------------------------
+- Dry build, source updated to 2024.12.31
+- Window Title fix to use utf8, thanks to Rich Walsh, need updated Qt
+- Fix Zoom to use keypad +, thanks to Rich Walsh
+
 Version 2024.01.25 (2024.01.25)
 -------------------------------
 
--Dry build, source updated to 2024.01.25
+- Dry build, source updated to 2024.01.25
 
 Version 2024.0.0 (2024.01.01)
 ------------------------------

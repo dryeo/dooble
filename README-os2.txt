@@ -144,3 +144,6 @@ Dooble.
 
 Thanks to Roderick Klein from OS/2 Voice (http://os2voice.org) for providing
 ongoing fundraising support.
+
+Thanks to Rich Walsh for fixes to the Window Title and Zoom function.
+
