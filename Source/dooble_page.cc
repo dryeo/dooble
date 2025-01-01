@@ -521,6 +521,7 @@ dooble_page::dooble_page(QWebEngineProfile *web_engine_profile,
   m_view->setZoomFactor(zoom_factor);
   prepare_zoom_toolbutton(zoom_factor);
   slot_dooble_credentials_created();
+  slot_prepare_reload_menu();
   QTimer::singleShot(1000, this, SLOT(slot_zoomed(void)));
 }
 
@@ -1002,9 +1003,6 @@ void dooble_page::prepare_shortcuts(void)
       m_shortcuts << new QShortcut(QKeySequence(tr("Ctrl+Shift+C")),
 				   this,
 				   SIGNAL(clone(void)));
-      m_shortcuts << new QShortcut(QKeySequence(tr("Ctrl+Shift+R")),
-				   this,
-				   SLOT(slot_reload_bypass_cache(void)));
     }
 }
 
@@ -3241,7 +3239,7 @@ void dooble_page::slot_publish_html(const QString &html)
       file.setAutoRemove(false);
       stream << title << Qt::endl;
       stream << url << Qt::endl;
-      stream << html;
+      stream << html.toUtf8();
     }
 }
 

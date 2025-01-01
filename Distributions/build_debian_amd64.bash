@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 # Alexis Megas.
 
-if [ ! -x /usr/bin/dpkg-deb ]; then
+if [ ! -x /usr/bin/dpkg-deb ]
+then
     echo "Please install dpkg-deb."
     exit 1
 fi
 
-if [ ! -x /usr/bin/fakeroot ]; then
+if [ ! -x /usr/bin/fakeroot ]
+then
     echo "Please install fakeroot."
     exit 1
 fi
 
-if [ ! -e dooble.pro ]; then
+if [ ! -e dooble.pro ]
+then
     echo "Please issue $0 from the primary directory."
     exit 1
 fi
@@ -31,7 +34,9 @@ cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6OpenGLWidgets.so.6 ./opt/dooble/Lib/.
 cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6Positioning.so.6 ./opt/dooble/Lib/.
 cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6PrintSupport.so.6 ./opt/dooble/Lib/.
 cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6Qml.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6QmlMeta.so.6 ./opt/dooble/Lib/.
 cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6QmlModels.so.6 ./opt/dooble/Lib/.
+cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6QmlWorkerScript.so.6 ./opt/dooble/Lib/.
 cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6Quick.so.6 ./opt/dooble/Lib/.
 cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6QuickWidgets.so.6 ./opt/dooble/Lib/.
 cp -p ~/Qt/6.8.1/gcc_64/lib/libQt6Sql.so.6 ./opt/dooble/Lib/.
@@ -74,7 +79,7 @@ cp -pr Distributions/UBUNTU-24.04 dooble-debian.d/DEBIAN
 cp -r ./opt/dooble dooble-debian.d/opt/.
 cp Icons/Logo/dooble.png dooble-debian.d/usr/share/pixmaps/.
 cp dooble.sh dooble-debian.d/usr/bin/dooble
-fakeroot dpkg-deb --build dooble-debian.d Dooble-2024.12.30_amd64.deb
+fakeroot dpkg-deb --build dooble-debian.d Dooble-2024.12.31_amd64.deb
 make distclean
 rm -fr ./opt
 rm -fr dooble-debian.d
