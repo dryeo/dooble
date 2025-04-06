@@ -50,7 +50,7 @@ dooble_web_engine_view::dooble_web_engine_view
   dooble::s_jar->set_web_engine_view(this);
   m_dialog_requests_timer.setInterval(100);
   m_dialog_requests_timer.setSingleShot(true);
-  m_is_private = QWebEngineProfile::defaultProfile() != web_engine_profile &&
+  m_is_private = dooble::s_default_web_engine_profile != web_engine_profile &&
     web_engine_profile;
 
   if(m_is_private)
@@ -108,7 +108,7 @@ dooble_web_engine_view::dooble_web_engine_view
 	  this,
 	  SLOT(slot_load_started(void)));
 
-  if(QWebEngineProfile::defaultProfile() != m_page->profile())
+  if(dooble::s_default_web_engine_profile != m_page->profile())
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     connect(m_page->profile(),
 	    SIGNAL(downloadRequested(QWebEngineDownloadItem *)),
@@ -167,8 +167,8 @@ QWebEngineView *dooble_web_engine_view::createWindow
 
   if(type == QWebEnginePage::WebBrowserWindow ||
      type == QWebEnginePage::WebDialog)
-    if(dooble_settings::setting("javascript").toBool() &&
-       dooble_settings::setting("javascript_block_popups").toBool())
+    if(dooble_settings::setting("javascript_block_popups").toBool() &&
+       dooble_settings::site_has_javascript_disabled(url()) == false)
       {
 	auto url(QUrl::fromUserInput(this->url().host()));
 
@@ -595,8 +595,8 @@ void dooble_web_engine_view::slot_accept_or_block_domain(void)
 #if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
 void dooble_web_engine_view::set_feature_permission
 (const QUrl &security_origin,
- QWebEnginePage::Feature feature,
- QWebEnginePage::PermissionPolicy policy)
+ const QWebEnginePage::Feature feature,
+ const QWebEnginePage::PermissionPolicy policy)
 {
   dooble::s_settings->set_site_feature_permission
     (security_origin,
@@ -607,8 +607,8 @@ void dooble_web_engine_view::set_feature_permission
 #else
 void dooble_web_engine_view::set_feature_permission
 (const QUrl &security_origin,
- QWebEnginePermission::PermissionType feature,
- QWebEnginePermission::State policy)
+ const QWebEnginePermission::PermissionType feature,
+ const QWebEnginePermission::State policy)
 {
   dooble::s_settings->set_site_feature_permission
     (security_origin,

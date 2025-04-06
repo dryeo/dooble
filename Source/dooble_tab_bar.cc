@@ -86,7 +86,7 @@ dooble_tab_bar::dooble_tab_bar(QWidget *parent):QTabBar(parent)
 
   prepare_style_sheets();
   setContextMenuPolicy(Qt::CustomContextMenu);
-  setDocumentMode(true);
+  setDocumentMode(dooble_settings::setting("tab_document_mode").toBool());
 
   if(dooble::s_application->style_name() == "fusion" ||
      dooble::s_application->style_name().contains("windows"))
@@ -234,6 +234,13 @@ void dooble_tab_bar::mouseDoubleClickEvent(QMouseEvent *event)
 {
   QTabBar::mouseDoubleClickEvent(event);
   emit new_tab();
+}
+
+void dooble_tab_bar::mousePressEvent(QMouseEvent *event)
+{
+  QTabBar::mousePressEvent(event);
+  event && event->button() == Qt::MiddleButton ?
+    emit tabCloseRequested(tabAt(event->pos())) : (void) 0;
 }
 
 void dooble_tab_bar::prepare_icons(void)
