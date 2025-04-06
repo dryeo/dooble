@@ -95,7 +95,6 @@ int main(int argc, char *argv[])
   if (!qEnvironmentVariableIsSet("QT_UTF8"))
     qputenv("QT_UTF8", "on");
 #endif
-
   QList<QUrl> urls;
   QString screen_mode("");
   auto attach = false;
@@ -327,6 +326,7 @@ int main(int argc, char *argv[])
 #endif
 #endif
   QString dooble_settings_path("");
+  dooble::s_application = new dooble_application(argc, argv);
 #if defined(Q_OS_WINDOWS)
   auto const bytes(qgetenv("DOOBLE_HOME").trimmed());
 
@@ -421,12 +421,6 @@ int main(int argc, char *argv[])
     httpUserAgent();
   dooble::s_settings = new dooble_settings();
   dooble::s_settings->set_settings_path(dooble_settings_path);
-
-  /*
-  ** Create the application after environment variables are prepared.
-  */
-
-  dooble::s_application = new dooble_application(argc, argv);
 
   /*
   ** Create a splash screen.
