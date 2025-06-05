@@ -207,7 +207,7 @@ dictoolbuild.output = $${WEB_DICTIONARIES}/${QMAKE_FILE_BASE}.bdic
 
 build_deb.bash =
 
-linux {
+linux-* {
 exists(/usr/bin/dpkg-deb) {
 }
 
@@ -291,6 +291,7 @@ QMAKE_CXXFLAGS_RELEASE += -O3 \
                           -std=c++17
 QMAKE_CXXFLAGS_RELEASE -= -O2
 } else:macx {
+QMAKE_APPLE_DEVICE_ARCHS = arm64 x86_64
 QMAKE_CXXFLAGS_RELEASE += -O3 \
                           -Wall \
                           -Wcast-align \
