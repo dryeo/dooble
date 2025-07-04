@@ -39,25 +39,12 @@
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="status">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">QLabel {color: green;}</string>
-         </property>
-         <property name="text">
-          <string>Status</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <widget class="QLineEdit" name="url">
          <property name="readOnly">
           <bool>true</bool>
+         </property>
+         <property name="placeholderText">
+          <string>Current Host</string>
          </property>
         </widget>
        </item>
@@ -83,6 +70,13 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Hosts</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QListWidget" name="list">
          <property name="alternatingRowColors">
           <bool>true</bool>
@@ -98,6 +92,13 @@
          </property>
          <property name="horizontalScrollMode">
           <enum>QAbstractItemView::ScrollPerPixel</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>Selected Host's JavaScript</string>
          </property>
         </widget>
        </item>

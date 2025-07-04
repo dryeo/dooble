@@ -365,7 +365,7 @@ QMAKE_CXXFLAGS_RELEASE -= -O2
 QMAKE_DISTCLEAN += -r qtwebengine_dictionaries \
                    .qmake.cache \
                    .qmake.stash \
-                   temp
+                   Temporary
 
 isEmpty(CONVERT_DICT) {
 } else {
@@ -386,10 +386,10 @@ LIBS		+= -framework Cocoa
 
 PRE_TARGETDEPS =
 
-MOC_DIR = temp/moc
-OBJECTS_DIR = temp/obj
-RCC_DIR = temp/rcc
-UI_DIR = temp/ui
+MOC_DIR = Temporary/moc
+OBJECTS_DIR = Temporary/obj
+RCC_DIR = Temporary/rcc
+UI_DIR = Temporary/ui
 
 macx {
 DISTFILES += $$DICTIONARIES/af_ZA/af_ZA.aff \
