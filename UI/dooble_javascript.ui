@@ -25,13 +25,13 @@
      </property>
      <widget class="QWidget" name="page_1">
       <attribute name="title">
-       <string>Current Page</string>
+       <string>Current Host</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
         <widget class="QLabel" name="label">
          <property name="text">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;A saved JavaScript script will be &lt;span style=&quot; font-weight:600;&quot;&gt;automatically injected&lt;/span&gt; into a page &lt;span style=&quot; font-weight:600;&quot;&gt;if the page's URL host matches the saved URL's host&lt;/span&gt;. Injection will occur after a page is loaded. You may also inject a script via the Execute! button.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Saved JavaScript script will be &lt;span style=&quot; font-weight:600;&quot;&gt;automatically injected&lt;/span&gt; into a page &lt;span style=&quot; font-weight:600;&quot;&gt;if the page's URL host matches the saved URL's host&lt;/span&gt;. Injection will occur after a page is loaded. You may also inject a script via the Execute! button.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
@@ -73,6 +73,16 @@
         <widget class="QLabel" name="label_2">
          <property name="text">
           <string>Hosts</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;An &lt;span style=&quot; font-weight:600;&quot;&gt;asterisk&lt;/span&gt; may be set as a host. An entry may be edited by first &lt;span style=&quot; font-weight:600;&quot;&gt;double-clicking&lt;/span&gt; it. The &lt;span style=&quot; font-weight:600;&quot;&gt;primary key&lt;/span&gt; of the database entries is the &lt;span style=&quot; font-weight:600;&quot;&gt;pair (JavaScript Digest, URL Digest)&lt;/span&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
          </property>
         </widget>
        </item>

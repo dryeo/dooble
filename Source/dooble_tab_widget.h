@@ -28,11 +28,13 @@
 #ifndef dooble_tab_widget_h
 #define dooble_tab_widget_h
 
+#include <QPointer>
 #include <QTabWidget>
+
+#include "dooble_page.h"
 
 class QFrame;
 class QToolButton;
-class dooble_page;
 class dooble_tab_bar;
 
 class dooble_tab_widget: public QTabWidget
@@ -50,6 +52,7 @@ class dooble_tab_widget: public QTabWidget
   void setTabTextColor(int index, const QColor &color);
   void setTabToolTip(int index, const QString &text);
   void set_is_cute(bool is_cute);
+  void set_tab_pinned(bool state, int index);
   void set_tab_position(void);
 
  protected:
@@ -58,6 +61,7 @@ class dooble_tab_widget: public QTabWidget
  private:
   QFrame *m_left_corner_widget;
   QFrame *m_right_corner_widget;
+  QHash<dooble_page *, QPointer<QWidget> > m_close_buttons;
   QToolButton *m_add_tab_tool_button;
   QToolButton *m_private_tool_button;
   QToolButton *m_tabs_menu_button;
@@ -84,6 +88,7 @@ class dooble_tab_widget: public QTabWidget
   void open_tab_as_new_cute_window(int index);
   void open_tab_as_new_private_window(int index);
   void open_tab_as_new_window(int index);
+  void pin_tab(bool state, int index);
   void reload_tab(int index);
   void reload_tab_periodically(int index, int seconds);
   void tabs_menu_button_clicked(void);

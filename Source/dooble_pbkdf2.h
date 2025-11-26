@@ -39,7 +39,7 @@ class dooble_pbkdf2: public QObject
  public:
   dooble_pbkdf2(const QByteArray &password,
 		const QByteArray &salt,
-		int block_cipher_type_index,
+		int cipher_type_index,
 		int hash_type_index,
 		int iterations_count,
 		int output_size);
@@ -54,7 +54,7 @@ class dooble_pbkdf2: public QObject
   QAtomicInteger<short> m_interrupt;
   QByteArray m_password;
   QByteArray m_salt;
-  int m_block_cipher_type_index;
+  int m_cipher_type_index;
   int m_hash_type_index;
   int m_iteration_count;
   int m_output_size;

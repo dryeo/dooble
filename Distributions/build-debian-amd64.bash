@@ -24,6 +24,7 @@ mkdir -p ./opt/dooble/Data
 mkdir -p ./opt/dooble/Documentation
 mkdir -p ./opt/dooble/Lib
 mkdir -p ./opt/dooble/Translations
+mkdir -p ./opt/dooble/translations
 cp -p ~/Qt/6.8.3/gcc_64/lib/libQt6Charts.so.6 ./opt/dooble/Lib/.
 cp -p ~/Qt/6.8.3/gcc_64/lib/libQt6Core.so.6 ./opt/dooble/Lib/.
 cp -p ~/Qt/6.8.3/gcc_64/lib/libQt6DBus.so.6 ./opt/dooble/Lib/.
@@ -55,7 +56,8 @@ cp -p ~/Qt/6.8.3/gcc_64/libexec/QtWebEngineProcess ./opt/dooble/.
 cp -pr ~/Qt/6.8.3/gcc_64/plugins ./opt/dooble/.
 cp -pr ~/Qt/6.8.3/gcc_64/resources/* ./opt/dooble/.
 cp -pr ~/Qt/6.8.3/gcc_64/translations/*.qm ./opt/dooble/Translations/.
-cp -pr ~/Qt/6.8.3/gcc_64/translations/qtwebengine_locales ./opt/dooble/.
+cp -pr ~/Qt/6.8.3/gcc_64/translations/qtwebengine_locales \
+   ./opt/dooble/translations/.
 chmod -x,g+w ./opt/dooble/Lib/*
 ~/Qt/6.8.3/gcc_64/bin/qmake -o Makefile dooble.pro && make -j $(nproc)
 cp -p ./Documentation/Documents/*.pdf ./opt/dooble/Documentation/.
@@ -79,7 +81,7 @@ cp -pr Distributions/UBUNTU-24.04 dooble-debian.d/DEBIAN
 cp -r ./opt/dooble dooble-debian.d/opt/.
 cp Icons/Logo/dooble.png dooble-debian.d/usr/share/pixmaps/.
 cp dooble.sh dooble-debian.d/usr/bin/dooble
-fakeroot dpkg-deb --build dooble-debian.d Dooble-2025.07.04_amd64.deb
+fakeroot dpkg-deb --build dooble-debian.d Dooble-2025.11.25_amd64.deb
 make distclean
 rm -fr ./opt
 rm -fr dooble-debian.d

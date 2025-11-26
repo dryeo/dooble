@@ -25,37 +25,42 @@
 ** DOOBLE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef dooble_block_cipher_h
-#define dooble_block_cipher_h
+#ifndef dooble_xchacha20_h
+#define dooble_xchacha20_h
 
 #include <QByteArray>
 
-class dooble_block_cipher
+class dooble_xchacha20
 {
  public:
-  static QByteArray xor_arrays(const QByteArray &a, const QByteArray &b)
-  {
-    QByteArray bytes;
-    auto const length = qMin(a.length(), b.length());
+  dooble_xchacha20(const QByteArray &key);
+  ~dooble_xchacha20();
+  QByteArray decrypt(const QByteArray &data);
+  QByteArray encrypt(const QByteArray &data);
+  static QByteArray chacha20_block(const QByteArray &key,
+				   const QByteArray &nonce,
+				   const uint32_t counter);
+  static QByteArray chacha20_encrypt(const QByteArray &key,
+				     const QByteArray &nonce,
+				     const QByteArray &plaintext,
+				     const uint32_t counter);
+  static QByteArray hchacha20_block(const QByteArray &key,
+				    const QByteArray &nonce);
+  static QByteArray xchacha20_encrypt(const QByteArray &key,
+				      const QByteArray &nonce,
+				      const QByteArray &plaintext,
+				      const uint32_t counter);
+  static uint32_t extract_4_bytes(const QByteArray &bytes, const int offset);
+  static void infuse_4_bytes(QByteArray &bytes,
+			     const int offset,
+			     const uint32_t value);
+  static void quarter_round(uint32_t &a, uint32_t &b, uint32_t &c, uint32_t &d);
+  static void rotate(uint32_t &x, const uint32_t n);
+  void set_key(const QByteArray &key);
 
-    for(int i = 0; i < length; i++)
-      bytes.append(static_cast<char> (a[i] ^ b[i]));
-
-    return bytes;
-  }
-
-  virtual ~dooble_block_cipher();
-  virtual QByteArray decrypt(const QByteArray &data) = 0;
-  virtual QByteArray encrypt(const QByteArray &data) = 0;
-  virtual void set_key(const QByteArray &key) = 0;
-  virtual void set_tweak(const QByteArray &tweak, bool *ok);
-
- protected:
+ private:
   QByteArray m_key;
-  int m_block_length;
   int m_key_length;
-  dooble_block_cipher(const QByteArray &key);
-  dooble_block_cipher(void);
 };
 
 #endif

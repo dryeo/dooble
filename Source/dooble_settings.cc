@@ -51,6 +51,7 @@
 #include "dooble_hmac.h"
 #include "dooble_pbkdf2.h"
 #include "dooble_random.h"
+#include "dooble_scroll_filter.h"
 #include "dooble_settings.h"
 #include "dooble_style_sheet.h"
 #include "dooble_text_utilities.h"
@@ -65,8 +66,10 @@ QMap<QString, QVariant> dooble_settings::s_getenv;
 QMap<QString, QVariant> dooble_settings::s_settings;
 QMultiMap<QUrl, QPair<int, bool> > dooble_settings::s_site_features_permissions;
 QReadWriteLock dooble_settings::s_getenv_mutex;
+QReadWriteLock dooble_settings::s_home_path_mutex;
 QReadWriteLock dooble_settings::s_settings_mutex;
 QString dooble_settings::s_http_user_agent;
+QString dooble_settings::s_home_path;
 QStringList dooble_settings::s_spell_checker_dictionaries;
 bool dooble_settings::s_reading_from_canvas_enabled = true;
 
@@ -236,10 +239,11 @@ dooble_settings::dooble_settings(void):dooble_main_window()
   else
     {
       QString path("");
-      auto const variable(qgetenv("DOOBLE_TRANSLATIONS_PATH").trimmed());
+      auto const variable
+	(qEnvironmentVariable("DOOBLE_TRANSLATIONS_PATH").trimmed());
 
       if(!variable.isEmpty())
-	path = QString::fromLocal8Bit(variable.constData());
+	path = variable;
       else
 	{
 	  path = QDir::currentPath();
@@ -324,13 +328,13 @@ dooble_settings::dooble_settings(void):dooble_main_window()
   s_settings["application_font"] = false;
   s_settings["auto_hide_tab_bar"] = false;
   s_settings["auto_load_images"] = true;
-  s_settings["block_cipher_type"] = "AES-256";
-  s_settings["block_cipher_type_index"] = 0;
   s_settings["block_third_party_cookies"] = true;
   s_settings["browsing_history_days"] = 15;
   s_settings["cache_size"] = 0;
   s_settings["cache_type_index"] = 0;
   s_settings["center_child_windows"] = true;
+  s_settings["cipher_type"] = "AES-256";
+  s_settings["cipher_type_index"] = 0;
   s_settings["cookie_policy_index"] = 2;
   s_settings["credentials_enabled"] = false;
   s_settings["denote_private_widgets"] = true;
@@ -483,10 +487,11 @@ dooble_settings::dooble_settings(void):dooble_main_window()
     ("QLabel {background-color: #f2dede; border: 1px solid #ebccd1; "
      "color:#a94442;}");
   m_ui.mman_message->setText
-    (tr("Memory locking is not available on this system."));
+    (tr("<html>Memory locking <b>is not available</b> on this system.</html>"));
 #else
   m_ui.mman_message->setText
-    (tr("Memory locking is provided by mlock() and munlock()."));
+    (tr("<html>Memory locking is <b>actively provided</b> by "
+	"mlock() and munlock().</html>"));
 #endif
 
   if(s_spell_checker_dictionaries.isEmpty())
@@ -507,11 +512,140 @@ dooble_settings::dooble_settings(void):dooble_main_window()
 	m_ui.dictionaries->addItem(item);
       }
 
+  foreach(auto widget, findChildren<QWidget *> ())
+    if(qobject_cast<QComboBox *> (widget) ||
+       qobject_cast<QDoubleSpinBox *> (widget) ||
+       qobject_cast<QSpinBox *> (widget))
+      widget->installEventFilter(new dooble_scroll_filter(this));
+
   restore(true);
   prepare_icons();
   prepare_shortcuts();
   show_qtwebengine_dictionaries_warning_label();
+  set_settings_path();
   slot_password_changed();
+}
+
+QString dooble_settings::prepare_home_path(void)
+{
+  QWriteLocker locker(&s_home_path_mutex);
+
+  if(s_home_path.isEmpty())
+    {
+#if defined(Q_OS_WINDOWS)
+      auto const bytes(qEnvironmentVariable("DOOBLE_HOME").trimmed());
+
+      if(bytes.isEmpty())
+	{
+	  QString const dooble_directory(".dooble");
+	  auto const username
+	    (qEnvironmentVariable("USERNAME").mid(0, 128).trimmed());
+	  auto home_directory(QDir::current());
+	  auto const file_info = QFileInfo(home_directory.absolutePath());
+
+	  if(!(file_info.isReadable() && file_info.isWritable()))
+	    home_directory = QDir::home();
+
+	  if(username.isEmpty())
+	    {
+	      if(!home_directory.exists(dooble_directory) &&
+		 !home_directory.mkdir(dooble_directory))
+		qDebug() << tr("Could not create the directory %1 in %2.").
+		  arg(dooble_directory).arg(home_directory.absolutePath());
+	    }
+	  else
+	    {
+	      auto const file_path
+		(username + QDir::separator() + dooble_directory);
+
+	      if(!home_directory.mkpath(file_path))
+		qDebug() << tr("Could not create the directory %1 in %2.").
+		  arg(file_path).arg(home_directory.absolutePath());
+	    }
+
+	  if(username.isEmpty())
+	    s_home_path = home_directory.absolutePath() +
+	      QDir::separator() +
+	      dooble_directory;
+	  else
+	    s_home_path = home_directory.absolutePath() +
+	      QDir::separator() +
+	      username +
+	      QDir::separator() +
+	      dooble_directory;
+	}
+      else
+	{
+	  if(!QDir().mkpath(bytes))
+	    qDebug() << tr("Could not create the directory %1.").arg(bytes);
+	  else
+	    s_home_path = bytes;
+	}
+#else
+      auto const bytes(qEnvironmentVariable("DOOBLE_HOME").trimmed());
+
+      if(bytes.isEmpty())
+	{
+	  auto const xdg_config_home
+	    (qEnvironmentVariable("XDG_CONFIG_HOME").trimmed());
+	  auto const xdg_data_home
+	    (qEnvironmentVariable("XDG_DATA_HOME").trimmed());
+
+	  if(xdg_config_home.isEmpty() && xdg_data_home.isEmpty())
+	    {
+	      QString const dooble_directory(".dooble");
+	      auto const home_directory(QDir::home());
+
+	      if(!home_directory.exists(dooble_directory) &&
+		 !home_directory.mkdir(dooble_directory))
+		qDebug() << tr("Could not create the directory %1 in %2.").
+		  arg(dooble_directory).arg(home_directory.absolutePath());
+
+	      s_home_path = home_directory.absolutePath() +
+		QDir::separator() +
+		dooble_directory;
+	    }
+	  else
+	    {
+	      QDir home_directory;
+
+	      if(!xdg_config_home.isEmpty())
+		home_directory = QDir(xdg_config_home);
+	      else
+		home_directory = QDir(xdg_data_home);
+
+	      if(!home_directory.exists("dooble") &&
+		 !home_directory.mkdir("dooble"))
+		qDebug() << tr("Could not create the directory %1 in %2.").
+		  arg("dooble").arg(home_directory.absolutePath());
+
+	      s_home_path = home_directory.absolutePath() +
+		QDir::separator() +
+		"dooble";
+	    }
+	}
+      else
+	{
+	  if(!QDir().mkpath(bytes))
+	    qDebug() << tr("Could not create the directory %1.").arg(bytes);
+	  else
+	    s_home_path = bytes;
+	}
+#endif
+
+      auto const file_info = QFileInfo(s_home_path);
+
+      if(!(file_info.isReadable() && file_info.isWritable()))
+	{
+	  s_home_path = QDir::tempPath() + QDir::separator() + "dooble";
+
+	  if(!QDir().mkpath(s_home_path))
+	    qDebug() << tr("Could not create the directory %1.").
+	      arg(s_home_path);
+	}
+    }
+
+  return s_home_path;
 }
 
 QString dooble_settings::shortcut(const QString &action) const
@@ -541,7 +675,7 @@ QString dooble_settings::use_material_icons(void)
 
 QString dooble_settings::user_agent(const QUrl &url)
 {
-  return s_user_agents.value(url.host(), s_http_user_agent);
+  return s_user_agents.value(url.host(), setting("user_agent").toString());
 }
 
 QString dooble_settings::zoom_frame_location_string(int index)
@@ -562,20 +696,22 @@ QVariant dooble_settings::getenv(const QString &n)
   if(s_getenv.contains(name))
     return s_getenv.value(name);
 
-  s_getenv[name] = qgetenv(name.toUtf8().constData());
+  s_getenv[name] = qEnvironmentVariable(name.toUtf8().constData());
   return s_getenv.value(name);
 }
 
-QVariant dooble_settings::setting(const QString &k,
-				  const QVariant &default_value)
+QVariant dooble_settings::setting
+(const QString &k, const QVariant &default_value)
 {
-  QReadLocker locker(&s_settings_mutex);
   auto const key(k.toLower().trimmed());
+
+  if(key == "home_path")
+    return prepare_home_path();
+
+  QReadLocker locker(&s_settings_mutex);
 
   if(!s_settings.contains(key))
     {
-      auto const home_path = s_settings.value("home_path").toString();
-
       locker.unlock();
 
       auto const database_name(dooble_database_utilities::database_name());
@@ -585,7 +721,7 @@ QVariant dooble_settings::setting(const QString &k,
 	auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
 	db.setDatabaseName
-	  (home_path + QDir::separator() + "dooble_settings.db");
+	  (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
 	if(db.open())
 	  {
@@ -615,26 +751,24 @@ QVariant dooble_settings::setting(const QString &k,
     }
 
   if(key == "add_tab_behavior_index")
-    return qBound
-      (0, s_settings.value(key, default_value).toInt(), 1);
+    return qBound(0, s_settings.value(key, default_value).toInt(), 1);
   else if(key == "address_widget_completer_mode_index")
-    return qBound
-      (0, s_settings.value(key, default_value).toInt(), 1);
+    return qBound(0, s_settings.value(key, default_value).toInt(), 1);
   else if(key == "authentication_iteration_count")
     return qBound
       (15000, s_settings.value(key, default_value).toInt(), 999999999);
-  else if(key == "block_cipher_type_index")
-    return qBound(0, s_settings.value(key, default_value).toInt(), 1);
   else if(key == "browsing_history_days")
     return qBound(0, s_settings.value(key, default_value).toInt(), 365);
   else if(key == "cache_size")
     return qBound(0, s_settings.value(key, default_value).toInt(), 2048);
   else if(key == "cache_type_index")
     return qBound(0, s_settings.value(key, default_value).toInt(), 1);
+  else if(key == "cipher_type_index")
+    return qBound(0, s_settings.value(key, default_value).toInt(), 2);
   else if(key == "cookie_policy_index")
     return qBound(0, s_settings.value(key, default_value).toInt(), 2);
-  else if(key == "dooble_accepted_or_blocked_domains_"
-	          "maximum_session_rejections")
+  else if(key ==
+	  "dooble_accepted_or_blocked_domains_maximum_session_rejections")
     return qBound(1, s_settings.value(key, default_value).toInt(), 1000000);
   else if(key == "favorites_sort_index")
     return qBound(0, s_settings.value(key, default_value).toInt(), 2);
@@ -705,9 +839,8 @@ bool dooble_settings::set_setting(const QString &key, const QVariant &value)
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-    db.setDatabaseName(setting("home_path").toString() +
-		       QDir::separator() +
-		       "dooble_settings.db");
+    db.setDatabaseName
+      (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
     if(db.open())
       {
@@ -965,9 +1098,8 @@ void dooble_settings::new_javascript_disable(const QString &d, bool state)
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-    db.setDatabaseName(setting("home_path").toString() +
-		       QDir::separator() +
-		       "dooble_settings.db");
+    db.setDatabaseName
+      (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
     if(db.open())
       {
@@ -1037,9 +1169,8 @@ void dooble_settings::new_user_agent(const QString &d, const QString &u)
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-    db.setDatabaseName(setting("home_path").toString() +
-		       QDir::separator() +
-		       "dooble_settings.db");
+    db.setDatabaseName
+      (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
     if(db.open())
       {
@@ -1426,9 +1557,8 @@ void dooble_settings::prepare_web_engine_environment_variables(void)
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-    db.setDatabaseName(setting("home_path").toString() +
-		       QDir::separator() +
-		       "dooble_settings.db");
+    db.setDatabaseName
+      (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
     if(db.open())
       {
@@ -1493,8 +1623,7 @@ void dooble_settings::prepare_web_engine_environment_variables(void)
 	    }
 
 	auto const old_environment
-	  (QString::fromLocal8Bit(qgetenv("QTWEBENGINE_CHROMIUM_FLAGS")).
-	   trimmed());
+	  (qEnvironmentVariable("QTWEBENGINE_CHROMIUM_FLAGS").trimmed());
 
 	if(!old_environment.isEmpty())
 	  {
@@ -1527,9 +1656,8 @@ void dooble_settings::prepare_web_engine_settings(void)
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-    db.setDatabaseName(setting("home_path").toString() +
-		       QDir::separator() +
-		       "dooble_settings.db");
+    db.setDatabaseName
+      (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
     if(db.open())
       {
@@ -1632,9 +1760,8 @@ void dooble_settings::purge_features_permissions(void)
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-    db.setDatabaseName(setting("home_path").toString() +
-		       QDir::separator() +
-		       "dooble_settings.db");
+    db.setDatabaseName
+      (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
     if(db.open())
       {
@@ -1663,9 +1790,8 @@ void dooble_settings::purge_javascript_block_popup_exceptions(void)
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-    db.setDatabaseName(setting("home_path").toString() +
-		       QDir::separator() +
-		       "dooble_settings.db");
+    db.setDatabaseName
+      (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
     if(db.open())
       {
@@ -1694,9 +1820,8 @@ void dooble_settings::purge_javascript_disable(void)
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-    db.setDatabaseName(setting("home_path").toString() +
-		       QDir::separator() +
-		       "dooble_settings.db");
+    db.setDatabaseName
+      (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
     if(db.open())
       {
@@ -1725,9 +1850,8 @@ void dooble_settings::purge_user_agents(void)
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-    db.setDatabaseName(setting("home_path").toString() +
-		       QDir::separator() +
-		       "dooble_settings.db");
+    db.setDatabaseName
+      (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
     if(db.open())
       {
@@ -1761,9 +1885,8 @@ void dooble_settings::remove_setting(const QString &key)
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-    db.setDatabaseName(setting("home_path").toString() +
-		       QDir::separator() +
-		       "dooble_settings.db");
+    db.setDatabaseName
+      (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
     if(db.open())
       {
@@ -1797,9 +1920,8 @@ void dooble_settings::restore(bool read_database)
       {
 	auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-	db.setDatabaseName(setting("home_path").toString() +
-			   QDir::separator() +
-			   "dooble_settings.db");
+	db.setDatabaseName
+	  (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
 	if(db.open())
 	  {
@@ -1869,10 +1991,21 @@ void dooble_settings::restore(bool read_database)
 	    m_ui.cache_type->count() - 1));
   m_ui.center_child_windows->setChecked
     (s_settings.value("center_child_windows", true).toBool());
-  m_ui.cipher->setCurrentIndex
-    (qBound(0,
-	    s_settings.value("block_cipher_type_index", 0).toInt(),
-	    m_ui.cipher->count() - 1));
+
+  int index = 0;
+
+  if(s_settings.contains("block_cipher_type_index"))
+    index = qBound
+      (0,
+       s_settings.value("block_cipher_type_index", 0).toInt(),
+       m_ui.cipher->count() - 1);
+  else
+    index = qBound
+      (0,
+       s_settings.value("cipher_type_index", 0).toInt(),
+       m_ui.cipher->count() - 1);
+
+  m_ui.cipher->setCurrentIndex(index);
   m_ui.cookie_policy->setCurrentIndex
     (qBound(0,
 	    s_settings.value("cookie_policy_index", 2).toInt(),
@@ -1891,6 +2024,9 @@ void dooble_settings::restore(bool read_database)
   m_ui.features_permissions_groupbox->setChecked
     (s_settings.value("features_permissions", true).toBool());
   m_ui.full_screen->setChecked(s_settings.value("full_screen", true).toBool());
+  m_ui.global_user_agent->setText
+    (s_settings.value("user_agent", s_http_user_agent).toString().trimmed());
+  m_ui.global_user_agent->setCursorPosition(0);
   m_ui.hash->setCurrentIndex
     (qBound(0,
 	    s_settings.value("hash_type_index", 1).toInt(), // SHA3-512
@@ -1949,8 +2085,7 @@ void dooble_settings::restore(bool read_database)
   m_ui.proxy_password->setText(s_settings.value("proxy_password").toString());
   m_ui.proxy_password->setCursorPosition(0);
   m_ui.proxy_port->setValue(s_settings.value("proxy_port", 0).toInt());
-
-  auto const index = s_settings.value("proxy_type_index", 0).toInt(); // None
+  index = s_settings.value("proxy_type_index", 0).toInt(); // None
 
   if(index == 0)
     m_ui.proxy_none->setChecked(true);
@@ -2009,7 +2144,7 @@ void dooble_settings::restore(bool read_database)
 	    s_settings.value("theme_color_index", 2).toInt(),
 	    m_ui.theme->count() - 1));
 #else
-    m_ui.theme->setCurrentIndex(2); // Default
+  m_ui.theme->setCurrentIndex(2); // Default
 #endif
   m_ui.web_plugins->setChecked(s_settings.value("web_plugins", false).toBool());
   m_ui.webgl->setChecked(s_settings.value("webgl", true).toBool());
@@ -2023,9 +2158,11 @@ void dooble_settings::restore(bool read_database)
     toString().toLower();
 
   if(m_ui.cipher->currentIndex() == 0)
-    s_settings["block_cipher_type"] = "AES-256";
+    s_settings["cipher_type"] = "AES-256";
+  else if(m_ui.cipher->currentIndex() == 1)
+    s_settings["cipher_type"] = "Threefish-256";
   else
-    s_settings["block_cipher_type"] = "Threefish-256";
+    s_settings["cipher_type"] = "XChaCha20";
 
   if(m_ui.hash->currentIndex() == 0)
     s_settings["hash_type"] = "Keccak-512";
@@ -2085,7 +2222,7 @@ void dooble_settings::restore(bool read_database)
     (s_settings.value("visited_links", false).toBool());
 
   {
-    QFile file(s_settings.value("home_path").toString() +
+    QFile file(prepare_home_path() +
 	       QDir::separator() +
 	       "WebEnginePersistentStorage" +
 	       QDir::separator() +
@@ -2312,9 +2449,8 @@ void dooble_settings::save_javascript_block_popup_exception
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-    db.setDatabaseName(setting("home_path").toString() +
-		       QDir::separator() +
-		       "dooble_settings.db");
+    db.setDatabaseName
+      (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
     if(db.open())
       {
@@ -2366,9 +2502,9 @@ void dooble_settings::save_settings(void)
     set_setting("settings_geometry", saveGeometry().toBase64());
 }
 
-void dooble_settings::set_settings_path(const QString &path)
+void dooble_settings::set_settings_path(void)
 {
-  m_ui.settings_path->setText(path);
+  m_ui.settings_path->setText(prepare_home_path());
 }
 
 void dooble_settings::set_site_feature_permission
@@ -2479,9 +2615,8 @@ void dooble_settings::set_site_feature_permission
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-    db.setDatabaseName(setting("home_path").toString() +
-		       QDir::separator() +
-		       "dooble_settings.db");
+    db.setDatabaseName
+      (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
     if(db.open())
       {
@@ -2617,7 +2752,7 @@ void dooble_settings::show_qtwebengine_dictionaries_warning_label(void)
 {
   m_ui.qtwebengine_dictionaries_warning_label->setVisible(false);
 
-  auto const bytes(qgetenv("QTWEBENGINE_DICTIONARIES_PATH"));
+  auto const bytes(qEnvironmentVariable("QTWEBENGINE_DICTIONARIES_PATH"));
 
   if(bytes.trimmed().isEmpty())
     {
@@ -2723,21 +2858,21 @@ void dooble_settings::slot_apply(void)
       remove_setting("authentication_iteration_count");
       remove_setting("authentication_salt");
       remove_setting("authentication_salted_password");
-      remove_setting("block_cipher_type");
-      remove_setting("block_cipher_type_index");
+      remove_setting("cipher_type");
+      remove_setting("cipher_type_index");
       remove_setting("hash_type");
       remove_setting("hash_type_index");
 
       {
 	QWriteLocker locker(&s_settings_mutex);
 
-	s_settings["block_cipher_type"] = "AES-256";
-	s_settings["block_cipher_type_index"] = 0;
+	s_settings["cipher_type"] = "AES-256";
+	s_settings["cipher_type_index"] = 0;
 	s_settings["hash_type"] = "SHA3-512";
 	s_settings["hash_type_index"] = 1;
       }
 
-      dooble::s_cryptography->set_block_cipher_type("AES-256");
+      dooble::s_cryptography->set_cipher_type("AES-256");
       dooble::s_cryptography->set_hash_type("SHA3-512");
 
       if(m_ui.credentials->isChecked())
@@ -2904,7 +3039,7 @@ void dooble_settings::slot_apply(void)
     qunsetenv("TZ");
 
   {
-    QFile file(setting("home_path").toString() +
+    QFile file(prepare_home_path() +
 	       QDir::separator() +
 	       "WebEnginePersistentStorage" +
 	       QDir::separator() +
@@ -2920,6 +3055,9 @@ void dooble_settings::slot_apply(void)
   }
 
   prepare_proxy(true);
+  remove_setting("block_cipher_type");
+  remove_setting("block_cipher_type_index");
+  remove_setting("home_path");
   save_fonts();
   set_setting("access_new_tabs", m_ui.access_new_tabs->isChecked());
   set_setting("add_tab_behavior_index", m_ui.add_tab_behavior->currentIndex());
@@ -2952,6 +3090,7 @@ void dooble_settings::slot_apply(void)
   set_setting
     ("features_permissions", m_ui.features_permissions_groupbox->isChecked());
   set_setting("full_screen", m_ui.full_screen->isChecked());
+  set_setting("user_agent", m_ui.global_user_agent->text().trimmed());
 
   if(m_ui.home_url->text().trimmed().isEmpty())
     set_setting("home_url", QUrl());
@@ -3331,7 +3470,7 @@ void dooble_settings::slot_pbkdf2_future_finished(void)
 	{
 	  /*
 	  ** list[0] - Keys
-	  ** list[1] - Block Cipher Type Index
+	  ** list[1] - Cipher Type Index
 	  ** list[2] - Hash Type Index
 	  ** list[3] - Iteration Count
 	  ** list[4] - Password
@@ -3365,9 +3504,9 @@ void dooble_settings::slot_pbkdf2_future_finished(void)
 	      ok = false;
 	    }
 
-	  if(ok && !set_setting("block_cipher_type_index", list.at(1).toInt()))
+	  if(ok && !set_setting("cipher_type_index", list.at(1).toInt()))
 	    {
-	      error = "set_setting('block_cipher_type_index') failure";
+	      error = "set_setting('cipher_type_index') failure";
 	      ok = false;
 	    }
 
@@ -3388,9 +3527,11 @@ void dooble_settings::slot_pbkdf2_future_finished(void)
 	      QWriteLocker locker(&s_settings_mutex);
 
 	      if(list.at(1).toInt() == 0)
-		s_settings["block_cipher_type"] = "AES-256";
+		s_settings["cipher_type"] = "AES-256";
+	      else if(list.at(1).toInt() == 1)
+		s_settings["cipher_type"] = "Threefish-256";
 	      else
-		s_settings["block_cipher_type"] = "Threefish-256";
+		s_settings["cipher_type"] = "XChaCha20";
 
 	      if(list.at(2).toInt() == 0)
 		s_settings["hash_type"] = "Keccak-512";
@@ -3402,8 +3543,8 @@ void dooble_settings::slot_pbkdf2_future_finished(void)
 	      remove_setting("authentication_iteration_count");
 	      remove_setting("authentication_salt");
 	      remove_setting("authentication_salted_password");
-	      remove_setting("block_cipher_type");
-	      remove_setting("block_cipher_type_index");
+	      remove_setting("cipher_type");
+	      remove_setting("cipher_type_index");
 	      remove_setting("credentials_enabled");
 	      remove_setting("hash_type");
 	      remove_setting("hash_type_index");
@@ -3411,8 +3552,8 @@ void dooble_settings::slot_pbkdf2_future_finished(void)
 	      {
 		QWriteLocker locker(&s_settings_mutex);
 
-		s_settings["block_cipher_type"] = "AES-256";
-		s_settings["block_cipher_type_index"] = 0;
+		s_settings["cipher_type"] = "AES-256";
+		s_settings["cipher_type_index"] = 0;
 		s_settings["hash_type"] = "SHA3-512";
 		s_settings["hash_type_index"] = 1;
 	      }
@@ -3423,9 +3564,11 @@ void dooble_settings::slot_pbkdf2_future_finished(void)
 	      dooble::s_cryptography->set_authenticated(true);
 
 	      if(list.at(1).toInt() == 0)
-		dooble::s_cryptography->set_block_cipher_type("AES-256");
+		dooble::s_cryptography->set_cipher_type("AES-256");
+	      else if(list.at(1).toInt() == 1)
+		dooble::s_cryptography->set_cipher_type("Threefish-256");
 	      else
-		dooble::s_cryptography->set_block_cipher_type("Threefish-256");
+		dooble::s_cryptography->set_cipher_type("XChaCha20");
 
 	      if(list.at(2).toInt() == 0)
 		dooble::s_cryptography->set_hash_type("Keccak-512");
@@ -3495,9 +3638,8 @@ void dooble_settings::slot_populate(void)
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-    db.setDatabaseName(setting("home_path").toString() +
-		       QDir::separator() +
-		       "dooble_settings.db");
+    db.setDatabaseName
+      (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
     if(db.open())
       {
@@ -4045,7 +4187,7 @@ void dooble_settings::slot_remove_selected_features_permissions(void)
     }
 
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
-  std::sort(list.begin(), list.end());
+  std::sort(list.begin(), list.end(), dooble_ui_utilities::sort_by_row);
 
   if(dooble::s_cryptography && dooble::s_cryptography->authenticated())
     {
@@ -4054,9 +4196,8 @@ void dooble_settings::slot_remove_selected_features_permissions(void)
       {
 	auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-	db.setDatabaseName(setting("home_path").toString() +
-			   QDir::separator() +
-			   "dooble_settings.db");
+	db.setDatabaseName
+	  (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
 	if(db.open())
 	  {
@@ -4134,8 +4275,9 @@ slot_remove_selected_javascript_block_popup_exceptions(void)
 {
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
 
-  auto list(m_ui.javascript_block_popups_exceptions->
-	    selectionModel()->selectedRows(1));
+  auto list
+    (m_ui.javascript_block_popups_exceptions->
+     selectionModel()->selectedRows(1));
 
   QApplication::restoreOverrideCursor();
 
@@ -4161,7 +4303,7 @@ slot_remove_selected_javascript_block_popup_exceptions(void)
     }
 
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
-  std::sort(list.begin(), list.end());
+  std::sort(list.begin(), list.end(), dooble_ui_utilities::sort_by_row);
 
   if(dooble::s_cryptography && dooble::s_cryptography->authenticated())
     {
@@ -4170,9 +4312,8 @@ slot_remove_selected_javascript_block_popup_exceptions(void)
       {
 	auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-	db.setDatabaseName(setting("home_path").toString() +
-			   QDir::separator() +
-			   "dooble_settings.db");
+	db.setDatabaseName
+	  (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
 	if(db.open())
 	  {
@@ -4249,7 +4390,7 @@ void dooble_settings::slot_remove_selected_javascript_disable(void)
     }
 
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
-  std::sort(list.begin(), list.end());
+  std::sort(list.begin(), list.end(), dooble_ui_utilities::sort_by_row);
 
   if(dooble::s_cryptography && dooble::s_cryptography->authenticated())
     {
@@ -4258,9 +4399,8 @@ void dooble_settings::slot_remove_selected_javascript_disable(void)
       {
 	auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-	db.setDatabaseName(setting("home_path").toString() +
-			   QDir::separator() +
-			   "dooble_settings.db");
+	db.setDatabaseName
+	  (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
 	if(db.open())
 	  {
@@ -4334,7 +4474,7 @@ void dooble_settings::slot_remove_selected_user_agents(void)
     }
 
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
-  std::sort(list.begin(), list.end());
+  std::sort(list.begin(), list.end(), dooble_ui_utilities::sort_by_row);
 
   if(dooble::s_cryptography && dooble::s_cryptography->authenticated())
     {
@@ -4343,9 +4483,8 @@ void dooble_settings::slot_remove_selected_user_agents(void)
       {
 	auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-	db.setDatabaseName(setting("home_path").toString() +
-			   QDir::separator() +
-			   "dooble_settings.db");
+	db.setDatabaseName
+	  (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
 	if(db.open())
 	  {
@@ -4427,7 +4566,7 @@ void dooble_settings::slot_reset(void)
        << "dooble_style_sheets.db";
 
   foreach(auto const &i, list)
-    QFile::remove(setting("home_path").toString() + QDir::separator() + i);
+    QFile::remove(prepare_home_path() + QDir::separator() + i);
 
   QApplication::restoreOverrideCursor();
   QApplication::processEvents();
@@ -4486,16 +4625,16 @@ void dooble_settings::slot_reset_credentials(void)
   remove_setting("authentication_iteration_count");
   remove_setting("authentication_salt");
   remove_setting("authentication_salted_password");
-  remove_setting("block_cipher_type");
-  remove_setting("block_cipher_type_index");
+  remove_setting("cipher_type");
+  remove_setting("cipher_type_index");
   remove_setting("hash_type");
   remove_setting("hash_type_index");
 
   {
     QWriteLocker locker(&s_settings_mutex);
 
-    s_settings["block_cipher_type"] = "AES-256";
-    s_settings["block_cipher_type_index"] = 0;
+    s_settings["cipher_type"] = "AES-256";
+    s_settings["cipher_type_index"] = 0;
     s_settings["hash_type"] = "SHA3-512";
     s_settings["hash_type_index"] = 1;
   }
@@ -4511,7 +4650,7 @@ void dooble_settings::slot_reset_credentials(void)
     (dooble_random::random_bytes(dooble_cryptography::s_encryption_key_length));
 
   dooble::s_cryptography->set_authenticated(false);
-  dooble::s_cryptography->set_block_cipher_type("AES-256");
+  dooble::s_cryptography->set_cipher_type("AES-256");
   dooble::s_cryptography->set_hash_type("SHA3-512");
   dooble::s_cryptography->set_keys(authentication_key, encryption_key);
   dooble_cryptography::memzero(authentication_key);
@@ -4697,9 +4836,8 @@ void dooble_settings::slot_web_engine_settings_item_changed
 	  {
 	    auto db = QSqlDatabase::addDatabase("QSQLITE", database_name);
 
-	    db.setDatabaseName(setting("home_path").toString() +
-			       QDir::separator() +
-			       "dooble_settings.db");
+	    db.setDatabaseName
+	      (prepare_home_path() + QDir::separator() + "dooble_settings.db");
 
 	    if(db.open())
 	      {

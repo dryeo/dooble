@@ -291,7 +291,6 @@ QMAKE_CXXFLAGS_RELEASE += -O3 \
                           -std=c++17
 QMAKE_CXXFLAGS_RELEASE -= -O2
 } else:macx {
-QMAKE_APPLE_DEVICE_ARCHS = arm64 x86_64
 QMAKE_CXXFLAGS_RELEASE += -O3 \
                           -Wall \
                           -Wcast-align \
@@ -337,7 +336,8 @@ QMAKE_CXXFLAGS_RELEASE += -O3 \
                           -Wpointer-arith \
                           -Wstack-protector \
 			  -Wstrict-overflow=1 \
-			  -Wstringop-overflow=4 \
+                          -Wstringop-overflow=4 \
+                          -Wtrampolines \
                           -Wundef \
                           -Wzero-as-null-pointer-constant \
                           -fstack-clash-protection \

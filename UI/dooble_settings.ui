@@ -353,8 +353,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>419</width>
-               <height>1526</height>
+               <width>642</width>
+               <height>1360</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_19">
@@ -1200,7 +1200,7 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>682</width>
+               <width>642</width>
                <height>1157</height>
               </rect>
              </property>
@@ -1298,7 +1298,7 @@
                  <item>
                   <widget class="QLabel" name="label_26">
                    <property name="text">
-                    <string>Containers: Accepted / Blocked Domains, Certificate Exceptions, Cookies, Downloads, Favicons, History, Search Engines, Style Sheets. All other containers, including the contents of WebEnginePersistentStorage, are not encrypted.</string>
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Containers: Accepted / Blocked Domains, Certificate Exceptions, Cookies, Downloads, Favicons, History, JavaScript Scripts, Search Engines, Style Sheets. All other containers, including the contents of WebEnginePersistentStorage, are not encrypted.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                    </property>
                    <property name="wordWrap">
                     <bool>true</bool>
@@ -1308,7 +1308,7 @@
                  <item>
                   <widget class="QLabel" name="label_4">
                    <property name="text">
-                    <string>If you would like Dooble to store your data in authentically-encrypted databases, please prepare your credentials. Please note that the Block Cipher setting is retained for permanent credentials only.</string>
+                    <string>If you would like Dooble to store your data in authentically-encrypted databases, please prepare your credentials. Please note that the Cipher setting is retained for permanent credentials only.</string>
                    </property>
                    <property name="wordWrap">
                     <bool>true</bool>
@@ -1337,7 +1337,7 @@
                    <item row="0" column="0">
                     <widget class="QLabel" name="label_7">
                      <property name="text">
-                      <string>Block Cipher</string>
+                      <string>Cipher</string>
                      </property>
                     </widget>
                    </item>
@@ -1412,6 +1412,11 @@
                      <item>
                       <property name="text">
                        <string>Threefish-256</string>
+                      </property>
+                     </item>
+                     <item>
+                      <property name="text">
+                       <string>XChaCha20</string>
                       </property>
                      </item>
                     </widget>
@@ -1819,9 +1824,9 @@
              <property name="geometry">
               <rect>
                <x>0</x>
-               <y>-2008</y>
+               <y>0</y>
                <width>642</width>
-               <height>2998</height>
+               <height>3042</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -2673,9 +2678,36 @@
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_24">
                  <item>
+                  <layout class="QHBoxLayout" name="horizontalLayout_30">
+                   <item>
+                    <widget class="QLabel" name="label_55">
+                     <property name="text">
+                      <string>Global</string>
+                     </property>
+                     <property name="buddy">
+                      <cstring>new_javascript_disable</cstring>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLineEdit" name="global_user_agent">
+                     <property name="toolTip">
+                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The Global User Agent will be provided to a requesting site if a specific user agent is not defined.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     </property>
+                     <property name="placeholderText">
+                      <string>Global User Agent</string>
+                     </property>
+                     <property name="clearButtonEnabled">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item>
                   <widget class="QLabel" name="label_53">
                    <property name="text">
-                    <string>Settings are saved immediately.</string>
+                    <string>Below settings are saved immediately.</string>
                    </property>
                   </widget>
                  </item>
@@ -3097,6 +3129,7 @@
   <tabstop>relative_location_character</tabstop>
   <tabstop>temporarily_disable_javascript</tabstop>
   <tabstop>zoom</tabstop>
+  <tabstop>global_user_agent</tabstop>
   <tabstop>new_user_agent</tabstop>
   <tabstop>add_user_agent</tabstop>
   <tabstop>user_agents</tabstop>

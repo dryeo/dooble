@@ -52,19 +52,19 @@ extern "C"
 ** https://en.wikipedia.org/wiki/Rijndael_S-box
 */
 
-static uint8_t s_rcon[][11] = {{0x00, 0x00, 0x00, 0x00},
-			       {0x01, 0x00, 0x00, 0x00},
-			       {0x02, 0x00, 0x00, 0x00},
-			       {0x04, 0x00, 0x00, 0x00},
-			       {0x08, 0x00, 0x00, 0x00},
-			       {0x10, 0x00, 0x00, 0x00},
-			       {0x20, 0x00, 0x00, 0x00},
-			       {0x40, 0x00, 0x00, 0x00},
-			       {0x80, 0x00, 0x00, 0x00},
-			       {0x1b, 0x00, 0x00, 0x00},
-			       {0x36, 0x00, 0x00, 0x00}};
+static const uint8_t s_rcon[][11] = {{0x00, 0x00, 0x00, 0x00},
+				     {0x01, 0x00, 0x00, 0x00},
+				     {0x02, 0x00, 0x00, 0x00},
+				     {0x04, 0x00, 0x00, 0x00},
+				     {0x08, 0x00, 0x00, 0x00},
+				     {0x10, 0x00, 0x00, 0x00},
+				     {0x20, 0x00, 0x00, 0x00},
+				     {0x40, 0x00, 0x00, 0x00},
+				     {0x80, 0x00, 0x00, 0x00},
+				     {0x1b, 0x00, 0x00, 0x00},
+				     {0x36, 0x00, 0x00, 0x00}};
 
-static uint8_t s_inv_sbox[256] =
+static const uint8_t s_inv_sbox[256] =
 {
   0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e,
   0x81, 0xf3, 0xd7, 0xfb,
@@ -100,7 +100,7 @@ static uint8_t s_inv_sbox[256] =
   0x55, 0x21, 0x0c, 0x7d
 };
 
-static uint8_t s_sbox[256] =
+static const uint8_t s_sbox[256] =
 {
   0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b,
   0xfe, 0xd7, 0xab, 0x76,
@@ -142,6 +142,7 @@ dooble_aes256::dooble_aes256(const QByteArray &key):dooble_block_cipher(key)
   m_Nk = 8;
   m_Nr = 14;
   m_block_length = 16; // Or, 128 bits.
+  m_key = key.mid(0, 32);
   m_key_length = 32; // Or, 256 bits.
 
   if(m_key.length() < m_key_length)
@@ -217,16 +218,16 @@ QByteArray dooble_aes256::decrypt(const QByteArray &data)
   if(decrypted.isEmpty())
     return decrypted;
 
-  QByteArray originalLength;
+  QByteArray original_length;
 
   if(decrypted.length() > static_cast<int> (sizeof(int)))
-    originalLength = decrypted.mid
+    original_length = decrypted.mid
       (decrypted.length() - static_cast<int> (sizeof(int)),
        static_cast<int> (sizeof(int)));
 
-  if(!originalLength.isEmpty())
+  if(!original_length.isEmpty())
     {
-      QDataStream in(&originalLength, QIODevice::ReadOnly);
+      QDataStream in(&original_length, QIODevice::ReadOnly);
       int s = 0;
 
       in >> s;
@@ -331,8 +332,8 @@ QByteArray dooble_aes256::encrypt(const QByteArray &data)
        static_cast<int> (qCeil(static_cast<qreal> (plaintext.length()) /
 			       static_cast<qreal> (m_block_length)) + 1), 0);
 
-  QByteArray originalLength;
-  QDataStream out(&originalLength, QIODevice::WriteOnly);
+  QByteArray original_length;
+  QDataStream out(&original_length, QIODevice::WriteOnly);
 
   out << static_cast<int> (data.length());
 
@@ -342,7 +343,7 @@ QByteArray dooble_aes256::encrypt(const QByteArray &data)
   plaintext.replace
     (plaintext.length() - static_cast<int> (sizeof(int)),
      static_cast<int> (sizeof(int)),
-     originalLength);
+     original_length);
 
   auto const iterations = plaintext.length() / m_block_length;
 
@@ -689,7 +690,7 @@ void dooble_aes256::set_key(const QByteArray &key)
   munlock(m_state, 4 * 4 * sizeof(m_state[0][0]));
 #endif
   dooble_cryptography::memzero(m_key);
-  m_key = key;
+  m_key = key.mid(0, 32);
 
   if(m_key.length() < m_key_length)
     m_key.append(m_key_length - m_key.length(), 0);
@@ -821,8 +822,7 @@ void dooble_aes256::test1_key_expansion(void)
   dooble_aes256 aes256(key);
 
   for(size_t i = 0; i < 60; i++)
-    if((i >= 8 && i <= 15) ||
-       (i >= 52 && i <= 59))
+    if((i >= 8 && i <= 15) || (i >= 52 && i <= 59))
       {
 	std::cout << "i = " << i << " ";
 
@@ -840,7 +840,9 @@ void dooble_aes256::test_performance(void)
   QElapsedTimer timer;
 
   timer.start();
+
   dooble_aes256 aes256(dooble_random::random_bytes(32));
+
   aes256.decrypt(aes256.encrypt(QByteArray(500000, '1')));
   qDebug() << "AES: " << timer.elapsed() << ".";
 }

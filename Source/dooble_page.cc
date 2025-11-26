@@ -73,6 +73,7 @@ dooble_page::dooble_page(QWebEngineProfile *web_engine_profile,
   m_export_as_png = false;
   m_export_png_timer.setSingleShot(true);
   m_is_location_frame_user_hidden = false;
+  m_is_pinned = false;
   m_is_private = dooble::s_default_web_engine_profile != web_engine_profile &&
     web_engine_profile;
   m_javascript_console = new dooble_javascript(this);
@@ -606,6 +607,11 @@ bool dooble_page::can_go_forward(void) const
 bool dooble_page::is_location_frame_user_hidden(void) const
 {
   return m_is_location_frame_user_hidden;
+}
+
+bool dooble_page::is_pinned(void) const
+{
+  return m_is_pinned;
 }
 
 bool dooble_page::is_private(void) const
@@ -1809,6 +1815,12 @@ void dooble_page::save(const QString &file_name)
   m_view->save(file_name);
 }
 
+void dooble_page::set_pinned(bool state)
+{
+  m_is_pinned = state;
+  m_view->set_pinned(state);
+}
+
 void dooble_page::show_menu(void)
 {
   auto point(m_ui.menu->pos());
@@ -2029,7 +2041,7 @@ void dooble_page::slot_always_allow_javascript_popup(void)
 void dooble_page::slot_authentication_required(const QUrl &url,
 					       QAuthenticator *authenticator)
 {
-  if(!authenticator || authenticator->isNull() || !url.isValid())
+  if(!authenticator || !url.isValid() || authenticator->isNull())
     {
       if(authenticator)
 	*authenticator = QAuthenticator();
@@ -2161,12 +2173,12 @@ void dooble_page::slot_dooble_credentials_authenticated(bool state)
 	  (dooble_settings::has_dooble_credentials());
     }
 
-  m_menu->clear();
+  isVisible() ? m_menu->clear() : (void) 0;
 }
 
 void dooble_page::slot_dooble_credentials_created(void)
 {
-  m_menu->clear();
+  isVisible() ? m_menu->clear() : (void) 0;
 }
 
 void dooble_page::slot_downloads_finished(void)
