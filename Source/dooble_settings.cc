@@ -742,6 +742,9 @@ QVariant dooble_settings::setting
 		s_settings[key] = value;
 	      }
 	  }
+	else
+	  qDebug() << tr("Unable to access the database %1.").
+	    arg(db.databaseName());
 
 	db.close();
       }
@@ -813,9 +816,11 @@ bool dooble_settings::reading_from_canvas_enabled(void)
   return s_reading_from_canvas_enabled;
 }
 
-bool dooble_settings::set_setting(const QString &key, const QVariant &value)
+bool dooble_settings::set_setting(const QString &k, const QVariant &value)
 {
-  if(key.trimmed().isEmpty())
+  auto const key(k.toLower().trimmed());
+
+  if(key.isEmpty())
     return false;
   else if(value.isNull())
     {
@@ -823,14 +828,14 @@ bool dooble_settings::set_setting(const QString &key, const QVariant &value)
 	{
 	  QWriteLocker locker(&s_settings_mutex);
 
-	  s_settings.remove(key.toLower().trimmed());
+	  s_settings.remove(key);
 	  return false;
 	}
     }
 
   QWriteLocker locker(&s_settings_mutex);
 
-  s_settings[key.toLower().trimmed()] = value;
+  s_settings[key] = value;
   locker.unlock();
 
   auto const database_name(dooble_database_utilities::database_name());
@@ -851,7 +856,7 @@ bool dooble_settings::set_setting(const QString &key, const QVariant &value)
 	query.exec("PRAGMA synchronous = NORMAL");
 	query.prepare
 	  ("INSERT OR REPLACE INTO dooble_settings (key, value) VALUES (?, ?)");
-	query.addBindValue(key.toLower().trimmed());
+	query.addBindValue(key);
 
 	if(key == "home_url" && value.toString().trimmed().isEmpty())
 	  query.addBindValue("");
@@ -859,7 +864,14 @@ bool dooble_settings::set_setting(const QString &key, const QVariant &value)
 	  query.addBindValue(value.toString().trimmed());
 
 	ok = query.exec();
+
+	if(!ok)
+	  qDebug() << tr("Unable to save the key %1 to the database %2.").
+	    arg(key).arg(db.databaseName());
       }
+    else
+      qDebug() << tr("Unable to access the database %1.").
+	arg(db.databaseName());
 
     db.close();
   }
@@ -2509,10 +2521,14 @@ void dooble_settings::set_settings_path(void)
 
 void dooble_settings::set_site_feature_permission
 #if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
-(const QUrl &url, const QWebEnginePage::Feature feature, bool state)
+(const QUrl &url,
+ const QWebEnginePage::Feature feature,
+ bool is_private,
+ bool state)
 #else
 (const QUrl &url,
  const QWebEnginePermission::PermissionType feature,
+ bool is_private,
  bool state)
 #endif
 {
@@ -2543,9 +2559,14 @@ void dooble_settings::set_site_feature_permission
       item->setData(Qt::UserRole, url);
       item->setData
 	(Qt::ItemDataRole(Qt::UserRole + 1), static_cast<int> (feature));
-      item->setFlags(Qt::ItemIsEnabled |
-		     Qt::ItemIsSelectable |
-		     Qt::ItemIsUserCheckable);
+
+      if(is_private)
+	item->setFlags(Qt::ItemIsSelectable);
+      else
+	item->setFlags(Qt::ItemIsEnabled |
+		       Qt::ItemIsSelectable |
+		       Qt::ItemIsUserCheckable);
+
       m_ui.features_permissions->setItem
 	(m_ui.features_permissions->rowCount() - 1, 0, item);
       item = new QTableWidgetItem
@@ -2605,7 +2626,9 @@ void dooble_settings::set_site_feature_permission
     (url, QPair<int, bool> (static_cast<int> (feature), state));
   QApplication::restoreOverrideCursor();
 
-  if(!dooble::s_cryptography || !dooble::s_cryptography->authenticated())
+  if(!dooble::s_cryptography ||
+     !dooble::s_cryptography->authenticated() ||
+     is_private)
     return;
 
   QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
@@ -2685,10 +2708,11 @@ void dooble_settings::show(void)
     restore(false);
 
   if(setting("save_geometry").toBool())
-    restoreGeometry(QByteArray::fromBase64(setting("settings_geometry").
-					   toByteArray()));
+    restoreGeometry
+      (QByteArray::fromBase64(setting("settings_geometry").toByteArray()));
 
   dooble_main_window::show();
+  set_settings_path();
 }
 
 void dooble_settings::show_normal(QWidget *parent)
@@ -2697,8 +2721,8 @@ void dooble_settings::show_normal(QWidget *parent)
     restore(false);
 
   if(setting("save_geometry").toBool())
-    restoreGeometry(QByteArray::fromBase64(setting("settings_geometry").
-					   toByteArray()));
+    restoreGeometry
+      (QByteArray::fromBase64(setting("settings_geometry").toByteArray()));
 
   if(dooble_settings::setting("center_child_windows").toBool())
     dooble_ui_utilities::center_window_widget(parent, this);
@@ -3206,12 +3230,14 @@ void dooble_settings::slot_features_permissions_item_changed
     (item->data(Qt::UserRole).toUrl(),
      QWebEnginePage::Feature(item->data(Qt::ItemDataRole(Qt::UserRole + 1)).
 			     toInt()),
+     false,
      item->checkState() == Qt::Checked);
 #else
   set_site_feature_permission
     (item->data(Qt::UserRole).toUrl(),
      QWebEnginePermission::
      PermissionType(item->data(Qt::ItemDataRole(Qt::UserRole + 1)).toInt()),
+     false,
      item->checkState() == Qt::Checked);
 #endif
 }
@@ -3284,7 +3310,8 @@ void dooble_settings::slot_new_javascript_block_popup_exception(void)
     (QUrl::fromUserInput(m_ui.new_javascript_block_popup_exception->text()));
 }
 
-void dooble_settings::slot_new_javascript_disable(const QUrl &url, bool state)
+void dooble_settings::slot_new_javascript_disable
+(const QUrl &url, bool is_private, bool state)
 {
   auto const domain(url.host());
 
@@ -3310,11 +3337,20 @@ void dooble_settings::slot_new_javascript_disable(const QUrl &url, bool state)
 
   auto item = new QTableWidgetItem();
 
-  item->setCheckState(state ? Qt::Checked : Qt::Unchecked);
+  if(is_private)
+    item->setCheckState(Qt::Checked);
+  else
+    item->setCheckState(state ? Qt::Checked : Qt::Unchecked);
+
   item->setData(Qt::UserRole, domain);
-  item->setFlags(Qt::ItemIsEnabled |
-		 Qt::ItemIsSelectable |
-		 Qt::ItemIsUserCheckable);
+
+  if(is_private)
+    item->setFlags(Qt::ItemIsSelectable);
+  else
+    item->setFlags(Qt::ItemIsEnabled |
+		   Qt::ItemIsSelectable |
+		   Qt::ItemIsUserCheckable);
+
   m_ui.javascript_disable->setItem
     (m_ui.javascript_disable->rowCount() - 1, 0, item);
   item = new QTableWidgetItem(domain);
@@ -3331,13 +3367,15 @@ void dooble_settings::slot_new_javascript_disable(const QUrl &url, bool state)
      SLOT(slot_javascript_disable_item_changed(QTableWidgetItem *)));
   prepare_table_statistics();
   QApplication::restoreOverrideCursor();
-  new_javascript_disable(domain, state);
+  is_private ? (void) 0 : new_javascript_disable(domain, state);
 }
 
 void dooble_settings::slot_new_javascript_disable(void)
 {
   slot_new_javascript_disable
-    (QUrl::fromUserInput(m_ui.new_javascript_disable->text().trimmed()), true);
+    (QUrl::fromUserInput(m_ui.new_javascript_disable->text().trimmed()),
+     false,
+     true);
 }
 
 void dooble_settings::slot_new_user_agent(const QString &u, const QUrl &url)

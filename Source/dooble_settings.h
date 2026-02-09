@@ -74,7 +74,7 @@ class dooble_settings: public dooble_main_window
   static bool has_dooble_credentials(void);
   static bool has_dooble_credentials_temporary(void);
   static bool reading_from_canvas_enabled(void);
-  static bool set_setting(const QString &key, const QVariant &value);
+  static bool set_setting(const QString &k, const QVariant &value);
   static bool site_has_javascript_block_popup_exception(const QUrl &url);
   static bool site_has_javascript_disabled(const QUrl &url);
   static int main_menu_bar_visible_key(void);
@@ -96,11 +96,13 @@ class dooble_settings: public dooble_main_window
 #if (QT_VERSION < QT_VERSION_CHECK(6, 8, 0))
   void set_site_feature_permission(const QUrl &url,
 				   const QWebEnginePage::Feature feature,
+				   bool is_private,
 				   bool state);
 #else
   void set_site_feature_permission
     (const QUrl &url,
      const QWebEnginePermission::PermissionType feature,
+     bool is_private,
      bool state);
 #endif
   void show_normal(QWidget *parent);
@@ -175,7 +177,8 @@ class dooble_settings: public dooble_main_window
   void slot_javascript_disable_item_changed(QTableWidgetItem *item);
   void slot_new_javascript_block_popup_exception(const QUrl &url);
   void slot_new_javascript_block_popup_exception(void);
-  void slot_new_javascript_disable(const QUrl &url, bool state);
+  void slot_new_javascript_disable
+    (const QUrl &url, bool is_private, bool state);
   void slot_new_javascript_disable(void);
   void slot_new_user_agent(const QString &u, const QUrl &url);
   void slot_new_user_agent(void);
